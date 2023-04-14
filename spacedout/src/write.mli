@@ -50,8 +50,13 @@ val tuple4g : 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) ca
 val tuple4 : 'a cast -> ('a * 'a * 'a * 'a) cast
 (** [tuple4 c s = tuple4g c c c c s]. *)
 
-val tuple5g : 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast
-  -> ('a * 'b * 'c * 'd * 'e) cast
+val tuple5g :
+  'a cast ->
+  'b cast ->
+  'c cast ->
+  'd cast ->
+  'e cast ->
+  ('a * 'b * 'c * 'd * 'e) cast
 
 val tuple5 : 'a cast -> ('a * 'a * 'a * 'a * 'a) cast
 (** [tuple5 c s = tuple5g c c c c c s]. *)
