@@ -1,5 +1,23 @@
 type 'a cast = string -> 'a
 
+(* Readers *)
+
+let string_as cast s = cast s
+
+let line_as cast ichan = string_as cast (input_line ichan)
+
+let lines_until_empty_as cast ichan =
+  let rec aux acc =
+    match input_line ichan with
+    | exception End_of_file when acc = [] -> raise End_of_file
+    | exception End_of_file -> List.rev acc
+    | "" -> List.rev acc
+    | line -> aux (string_as cast line :: acc)
+  in
+  aux []
+
+(* Casts *)
+
 let cast = Fun.id
 
 let int s =
@@ -36,64 +54,84 @@ let non_empty_list ?sep cast input =
   if result = [] then failwith "ExtRead.non_empty_list";
   result
 
+let seq ?sep cast input =
+  list ?sep cast input |> List.to_seq
+
+let non_empty_seq ?sep cast input =
+  non_empty_list ?sep cast input |> List.to_seq
+
 let array ?sep cast input =
   list ?sep cast input |> Array.of_list
 
 let non_empty_array ?sep cast input =
   non_empty_list ?sep cast input |> Array.of_list
 
-let tuple2 ?(sep = blank) cast1 cast2 input =
+let tuple_2 ?(sep = blank) c1 c2 input =
   match Str.bounded_split sep input 2 with
-  | [value1; value2] -> (cast1 value1, cast2 value2)
-  | _ -> failwith "ExtRead.tuple2"
+  | [v1; v2] -> (c1 v1, c2 v2)
+  | _ -> failwith "SpacedOut.Read.tuple_2"
 
-let pair = tuple2
+let pair = tuple_2
+let couple = tuple_2
 
-let tuple3 ?(sep = blank) cast1 cast2 cast3 input =
+let tuple_3 ?(sep = blank) c1 c2 c3 input =
   match Str.bounded_split sep input 3 with
-  | [value1; value2; value3] -> (cast1 value1, cast2 value2, cast3 value3)
-  | _ -> failwith "ExtRead.tuple3"
+  | [v1; v2; v3] -> (c1 v1, c2 v2, c3 v3)
+  | _ -> failwith "SpacedOut.Read.tuple_3"
 
-let triple = tuple3
+let triple = tuple_3
 
-let tuple4 ?(sep = blank) cast1 cast2 cast3 cast4 input =
+let tuple_4 ?(sep = blank) c1 c2 c3 c4 input =
   match Str.bounded_split sep input 4 with
-  | [value1; value2; value3; value4] ->
-    (cast1 value1, cast2 value2, cast3 value3, cast4 value4)
-  | _ -> failwith "ExtRead.tuple4"
+  | [v1; v2; v3; v4] -> (c1 v1, c2 v2, c3 v3, c4 v4)
+  | _ -> failwith "SpacedOut.Read.tuple_4"
 
-let tuple5 ?(sep = blank) cast1 cast2 cast3 cast4 cast5 input =
+let quadruple = tuple_4
+
+let tuple_5 ?(sep = blank) c1 c2 c3 c4 c5 input =
   match Str.bounded_split sep input 5 with
-  | [value1; value2; value3; value4; value5] ->
-    (cast1 value1, cast2 value2, cast3 value3, cast4 value4, cast5 value5)
-  | _ -> failwith "ExtRead.tuple5"
+  | [v1; v2; v3; v4; v5] -> (c1 v1, c2 v2, c3 v3, c4 v4, c5 v5)
+  | _ -> failwith "SpacedOut.Read.tuple_5"
 
-let tuple6 ?(sep = blank) cast1 cast2 cast3 cast4 cast5 cast6 input =
+let quintuple = tuple_5
+let pentuple = tuple_5
+
+let tuple_6 ?(sep = blank) c1 c2 c3 c4 c5 c6 input =
   match Str.bounded_split sep input 6 with
-  | [value1; value2; value3; value4; value5; value6] ->
-    (cast1 value1, cast2 value2, cast3 value3, cast4 value4, cast5 value5, cast6 value6)
-  | _ -> failwith "ExtRead.tuple6"
+  | [v1; v2; v3; v4; v5; v6] -> (c1 v1, c2 v2, c3 v3, c4 v4, c5 v5, c6 v6)
+  | _ -> failwith "SpacedOut.Read.tuple_6"
 
-let of_string cast s = cast s
+let sextuple = tuple_6
+let hextuple = tuple_6
 
-let line_of_chan ichan cast = input_line ichan |> string cast
-let line cast = line_of_chan stdin cast
+let tuple_7 ?(sep = blank) c1 c2 c3 c4 c5 c6 c7 input =
+  match Str.bounded_split sep input 7 with
+  | [v1; v2; v3; v4; v5; v6; v7] -> (c1 v1, c2 v2, c3 v3, c4 v4, c5 v5, c6 v6, c7 v7)
+  | _ -> failwith "SpacedOut.Read.tuple_7"
 
-let lines_of_chan_until_empty ichan cast =
-  let rec aux acc =
-    match input_line ichan with
-    | exception End_of_file when acc = [] -> raise End_of_file
-    | exception End_of_file -> List.rev acc
-    | "" -> List.rev acc
-    | line -> aux @@ (line |> string cast) :: acc
-  in
-  aux []
-let lines_until_empty cast = lines_of_chan_until_empty stdin cast
+let septuple = tuple_7
+let heptuple = tuple_7
+
+let tuple_8 ?(sep = blank) c1 c2 c3 c4 c5 c6 c7 c8 input =
+  match Str.bounded_split sep input 8 with
+  | [v1; v2; v3; v4; v5; v6; v7; v8] -> (c1 v1, c2 v2, c3 v3, c4 v4, c5 v5, c6 v6, c7 v7, c8 v8)
+  | _ -> failwith "SpacedOut.Read.tuple_8"
+
+let octuple = tuple_8
+
+let tuple_9 ?(sep = blank) c1 c2 c3 c4 c5 c6 c7 c8 c9 input =
+  match Str.bounded_split sep input 9 with
+  | [v1; v2; v3; v4; v5; v6; v7; v8; v9] -> (c1 v1, c2 v2, c3 v3, c4 v4, c5 v5, c6 v6, c7 v7, c8 v8, c9 v9)
+  | _ -> failwith "SpacedOut.Read.tuple_9"
+
+let nonuple = tuple_9
+
+(* Tests *)
 
 let%test_module _ =
   (module struct
     let test cast string expected =
-      let result = try Ok (of_string cast string) with exn -> Error exn in
+      let result = try Ok (string_as cast string) with exn -> Error exn in
       match result, expected with
       | Ok result, Ok expected when result = expected -> true
       | Error result, Error expected when expected result -> true
@@ -137,28 +175,28 @@ let%test_module _ =
     let%test _ = test (pair int int) "7 8 9" (Error failure)
 
     let%test _ = test (pair int float) "7 34.2" (Ok (7, 34.2))
-    let%test _ = test (tuple2 int int) "8 9" (Ok (8, 9))
-    let%test _ = test (tuple2 int float) "7 34.2" (Ok (7, 34.2))
+    let%test _ = test (tuple_2 int int) "8 9" (Ok (8, 9))
+    let%test _ = test (tuple_2 int float) "7 34.2" (Ok (7, 34.2))
 
-    let%test _ = test (tuple3 int int int) "7 8 9" (Ok (7, 8, 9))
-    let%test _ = test (tuple3 int int int) "7 L 9" (Error failure)
-    let%test _ = test (tuple3 int int int) "7 8" (Error failure)
-    let%test _ = test (tuple3 int int int) "7 8 9 10" (Error failure)
+    let%test _ = test (tuple_3 int int int) "7 8 9" (Ok (7, 8, 9))
+    let%test _ = test (tuple_3 int int int) "7 L 9" (Error failure)
+    let%test _ = test (tuple_3 int int int) "7 8" (Error failure)
+    let%test _ = test (tuple_3 int int int) "7 8 9 10" (Error failure)
 
-    let%test _ = test (tuple3 int float string) "7 8 9" (Ok (7, 8., "9"))
-    let%test _ = test (tuple3 int float string) "7 8" (Error failure)
-    let%test _ = test (tuple3 int float string) "7 8 9 10" (Ok (7, 8., "9 10"))
-    let%test _ = test (tuple3 int float no_space_string) "7 8 9 10" (Error failure)
+    let%test _ = test (tuple_3 int float string) "7 8 9" (Ok (7, 8., "9"))
+    let%test _ = test (tuple_3 int float string) "7 8" (Error failure)
+    let%test _ = test (tuple_3 int float string) "7 8 9 10" (Ok (7, 8., "9 10"))
+    let%test _ = test (tuple_3 int float no_space_string) "7 8 9 10" (Error failure)
 
-    let%test _ = test (tuple4 int int int int) "7 8 9 10" (Ok (7, 8, 9, 10))
-    let%test _ = test (tuple4 int float char string) "7 8 9 10" (Ok (7, 8., '9', "10"))
-    let%test _ = test (tuple4 int float char string) "7 8 9 10 11" (Ok (7, 8., '9', "10 11"))
-    let%test _ = test (tuple4 int float char no_space_string) "7 8 9 10 11" (Error failure)
+    let%test _ = test (tuple_4 int int int int) "7 8 9 10" (Ok (7, 8, 9, 10))
+    let%test _ = test (tuple_4 int float char string) "7 8 9 10" (Ok (7, 8., '9', "10"))
+    let%test _ = test (tuple_4 int float char string) "7 8 9 10 11" (Ok (7, 8., '9', "10 11"))
+    let%test _ = test (tuple_4 int float char no_space_string) "7 8 9 10 11" (Error failure)
 
-    let%test _ = test (tuple5 int int int int int) "7 8 9 10 11" (Ok (7, 8, 9, 10, 11))
-    let%test _ = test (tuple5 int float bit char string) "7 8 1 9 10" (Ok (7, 8., true, '9', "10"))
-    let%test _ = test (tuple5 int float bit char string) "7 8 0 9 10 11" (Ok (7, 8., false, '9', "10 11"))
-    let%test _ = test (tuple5 int float bit char no_space_string) "7 8 0 9 10 11" (Error failure)
+    let%test _ = test (tuple_5 int int int int int) "7 8 9 10 11" (Ok (7, 8, 9, 10, 11))
+    let%test _ = test (tuple_5 int float bit char string) "7 8 1 9 10" (Ok (7, 8., true, '9', "10"))
+    let%test _ = test (tuple_5 int float bit char string) "7 8 0 9 10 11" (Ok (7, 8., false, '9', "10 11"))
+    let%test _ = test (tuple_5 int float bit char no_space_string) "7 8 0 9 10 11" (Error failure)
 
     let%test _ = test (pair int (list string)) "7 8 9 10" (Ok (7, ["8"; "9"; "10"]))
     let%test _ = test (pair int (list string)) "7" (Error failure)

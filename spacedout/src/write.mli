@@ -1,8 +1,17 @@
 (** {1 SpacedOut Write} *)
 
-(** {2 Casts} *)
-
 type 'a cast
+
+(** {2 Writers} *)
+
+val string_as : 'a cast -> 'a -> string
+(** [to_string c v] casts [v] using [c] and returns the result as a string. *)
+
+val line_as : 'a cast -> out_channel -> 'a -> unit
+(** [line c ochan v] casts [v] using [c] and writes the result [ochan], adding a
+    newline character. *)
+
+(** {2 Casts} *)
 
 (** {3 Simple} *)
 
@@ -17,63 +26,44 @@ val char : char cast
 
 val string : string cast
 
-val list : 'a cast -> 'a list cast
-
-val array : 'a cast -> 'a array cast
+val seq : ?sep: string -> 'a cast -> 'a Seq.t cast
+val list : ?sep: string -> 'a cast -> 'a list cast
+val array : ?sep: string -> 'a cast -> 'a array cast
 
 (** {3 Tuples}
 
-   For each tuple size n (up to 5), we provide a function tuplen and a function
-   tupleng, the former taking one cast and the latter taking n casts ("g" stands
-   for "generic"). *)
+   For each tuple size [n] (up to 9), we provide a function [tuple_<n>] as well
+   as some common aliases (eg. [pair] for [tuple_2] or [pentuple] for
+   [tuple_5]). [tuple_<n>] takes [n] cast functions and returns a cast for the
+   corresponding [n]-tuples.
 
-val tuple2g : 'a cast -> 'b cast -> ('a * 'b) cast
-(** [tuple2g c1 c2] is a cast that takes a pair, applies [c1] on the first part
-   and [c2] on the second part and glues the result with a space character. *)
+   [tuple_<n> ~sep c1 ... c<n>] is a cast that applies [c1] ... [c<n>] on its
+   [n] inputs and catenates them using [sep]s. *)
 
-val tuple2 : 'a cast -> ('a * 'a) cast
-(** [tuple2 c t = tuple2g c c t]. *)
+val tuple_2 : ?sep: string -> 'a cast -> 'b cast -> ('a * 'b) cast
+val pair : ?sep: string -> 'a cast -> 'b cast -> ('a * 'b) cast
+val couple : ?sep: string -> 'a cast -> 'b cast -> ('a * 'b) cast
 
-val pairg : 'a cast -> 'b cast -> ('a * 'b) cast
-(** Alias for [tuple2g]. *)
+val tuple_3 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
+val triple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
 
-val pair : 'a cast -> ('a * 'a) cast
-(** Alias for [tuple2]. *)
+val tuple_4 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
+val quadruple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
 
-val tuple3g : 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
+val tuple_5 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
+val pentuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
+val quintuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
 
-val tuple3 : 'a cast -> ('a * 'a * 'a) cast
-(** [tuple3 c s = tuple3g c c c s]. *)
+val tuple_6 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
+val sextuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
+val hextuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
 
-val tuple4g : 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
+val tuple_7 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
+val septuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
+val heptuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
 
-val tuple4 : 'a cast -> ('a * 'a * 'a * 'a) cast
-(** [tuple4 c s = tuple4g c c c c s]. *)
+val tuple_8 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) cast
+val octuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) cast
 
-val tuple5g :
-  'a cast ->
-  'b cast ->
-  'c cast ->
-  'd cast ->
-  'e cast ->
-  ('a * 'b * 'c * 'd * 'e) cast
-
-val tuple5 : 'a cast -> ('a * 'a * 'a * 'a * 'a) cast
-(** [tuple5 c s = tuple5g c c c c c s]. *)
-
-(** {2 Reader} *)
-
-val to_string : 'a cast -> 'a -> string
-(** [to_string c v] casts [v] using [c] and returns the result as a string. *)
-
-val line : 'a cast -> 'a -> unit
-(** [line c v] casts [v] using [c] and writes the result to standard output,
-   adding a newline character. *)
-
-val line_to_err : 'a cast -> 'a -> unit
-(** [line_to_err c v] casts [v] using [c] and writes the result to standard
-   error, adding a newline character. *)
-
-val line_to_chan : out_channel -> 'a cast -> 'a -> unit
-(** [line_to_chan ochan c v] casts [v] using [c] and writes the result to
-   [ochan], adding a newline character. *)
+val tuple_9 : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> 'i cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) cast
+val nonuple : ?sep: string -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> 'i cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) cast

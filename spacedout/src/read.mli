@@ -1,8 +1,20 @@
 (** {1 SpacedOut Read} *)
 
-(** {2 Casts} *)
-
 type 'a cast
+
+(** {2 Readers} *)
+
+val string_as : 'a cast -> string -> 'a
+(** [string_as c] reads a string and casts it using [c]. *)
+
+val line_as : 'a cast -> in_channel -> 'a
+(** [line_as c] reads one line from a channel and casts it using [c]. *)
+
+val lines_until_empty_as : 'a cast -> in_channel -> 'a list
+(** [lines_until_empty_as c] reads lines from a channel and casts them using
+    [c]. It stops at the first empty line it meets. *)
+
+(** {2 Casts} *)
 
 (** {3 Simple} *)
 
@@ -18,76 +30,54 @@ val no_space_string : string cast
    [string]. In the [tupleng] functions below, it is only different to [string]
    in last position. *)
 
+val seq : ?sep: Str.regexp -> 'a cast -> 'a Seq.t cast
 val list : ?sep: Str.regexp -> 'a cast -> 'a list cast
 val array : ?sep: Str.regexp -> 'a cast -> 'a array cast
 
+val non_empty_seq : ?sep: Str.regexp -> 'a cast -> 'a Seq.t cast
 val non_empty_list : ?sep: Str.regexp -> 'a cast -> 'a list cast
 val non_empty_array : ?sep: Str.regexp -> 'a cast -> 'a array cast
 
 (** {3 Tuples}
 
-   For each tuple size n (up to 5), we provide a function [tuple<n>] taking [n]
-   cast functions and returning a tuple. *)
+   For each tuple size [n] (up to 9), we provide a function [tuple_<n>] as well
+   as some common aliases (eg. [pair] for [tuple_2] or [pentuple] for
+   [tuple_5]). [tuple_<n>] takes [n] cast functions and returns an [n]-tuple.
 
-val tuple2 : ?sep: Str.regexp -> 'a cast -> 'b cast -> ('a * 'b) cast
-(** [tuple2 ~sep cast1 cast2] is a cast that cuts its input at the first
-    [sep] (which defaults to blank characters) and applies [cast1] on the
-    first part and [cast2] on the second part, returning the 2-tuple (pair) of
-    the results. *)
+   [tuple_<n> ~sep c1 ... c<n>] is a cast that cuts its input at the [n - 1]
+   first [sep]s (which default to blank characters) and applies [c1] on the
+   first part, [c2] on the second part, ... and [c<n>] on the [n]th part,
+   returning the [n]-tuple of the results. *)
 
+val tuple_2 : ?sep: Str.regexp -> 'a cast -> 'b cast -> ('a * 'b) cast
 val pair : ?sep: Str.regexp -> 'a cast -> 'b cast -> ('a * 'b) cast
-(** Alias for {!tuple2}. *)
+val couple : ?sep: Str.regexp -> 'a cast -> 'b cast -> ('a * 'b) cast
 
-val tuple3 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
-(** [tuple3 ~sep cast1 cast2 cast3] is a cast that cuts its input at the
-    two first [sep]s (which default to blank characters) and applies
-    [cast1] on the first part, [cast2] on the second part and [cast3] on the
-    third part, returning the 3-tuple of the results. *)
-
+val tuple_3 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
 val triple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> ('a * 'b * 'c) cast
-(** Alias for {!tuple3}. *)
 
-val tuple4 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
-(** [tuple4 ~sep cast1 cast2 cast3 cast4] is a cast that cuts its input at
-    the three first [sep]s (which default to blank characters) and applies
-    [cast1] on the first part, [cast2] on the second part, [cast3] on the third
-    part and [cast4] on the fourth part, returning the 4-tuple of the
-    results. *)
+val tuple_4 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
+val quadruple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> ('a * 'b * 'c * 'd) cast
 
-val tuple5 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
-(** [tuple5 ~sep cast1 cast2 cast3 cast4 cast5] is a cast that cuts its
-    input at the first four [sep]s (which default to blank characters) and
-    applies [cast1] on the first part, [cast2] on the second part, [cast3] on
-    the third part, [cast4] on the fourth part and [cast5] on the fifth part,
-    returning the 5-tuple of the results. *)
+val tuple_5 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
+val pentuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
+val quintuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> ('a * 'b * 'c * 'd * 'e) cast
 
-val tuple6 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
-(** [tuple6 ~sep cast1 cast2 cast3 cast4 cast5 cast6] is a cast that cuts its
-    input at the first five [sep]s (which default to blank characters) and
-    applies [cast1] on the first part, [cast2] on the second part, [cast3] on
-    the third part, [cast4] on the fourth part, [cast5] on the fifth part and
-    [cast6] on the sixth part, returning the 6-tuple of the results. *)
+val tuple_6 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
+val sextuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
+val hextuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> ('a * 'b * 'c * 'd * 'e * 'f) cast
+
+val tuple_7 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
+val septuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
+val heptuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g) cast
+
+val tuple_8 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) cast
+val octuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h) cast
+
+val tuple_9 : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> 'i cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) cast
+val nonuple : ?sep: Str.regexp -> 'a cast -> 'b cast -> 'c cast -> 'd cast -> 'e cast -> 'f cast -> 'g cast -> 'h cast -> 'i cast -> ('a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i) cast
 
 (** {3 Custom} *)
 
 val cast : (string -> 'a) -> 'a cast
 (** Create a cast from a [string -> 'a] function. *)
-
-(** {2 Reader} *)
-
-val of_string : 'a cast -> string -> 'a
-(** [string c s] reads [s] and casts it using [c]. *)
-
-val line : 'a cast -> 'a
-(** [line c] reads one line from standard input and casts it using [c]. *)
-
-val line_of_chan : in_channel -> 'a cast -> 'a
-(** [line_from_chan ichan c] reads one line from [ichan] and casts it using [c]. *)
-
-val lines_until_empty : 'a cast -> 'a list
-(** [lines_until_empty c] reads lines from standard input and casts them using
-    [c]. It stops at the first empty line it meets. *)
-
-val lines_of_chan_until_empty : in_channel -> 'a cast -> 'a list
-(** [lines_of_chan_until_empty ichan c] reads lines from [ichan] and casts them
-    using [c]. It stops at the first empty line it meets. *)
