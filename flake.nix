@@ -23,6 +23,7 @@
 
       imports = [
         ./monadise/flake-part.nix
+        ./spacedout/flake-part.nix
         ./valet/flake-part.nix
       ];
 
@@ -50,6 +51,7 @@
             inputsFrom = with self'.packages; [
               monadise
               monadise-lwt
+              spacedout
               valet
             ];
             inherit (self'.checks.git-hooks) shellHook;

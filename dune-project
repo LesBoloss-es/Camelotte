@@ -3,6 +3,7 @@
 (source (github niols/camelotte))
 (authors "Niols <niols@niols.fr>")
 (maintainers "Niols <niols@niols.fr>")
+(license MIT)
 
 (generate_opam_files true)
 
@@ -21,6 +22,12 @@
  (depends
   (ocaml (>= 5.0))
   lwt))
+
+(package
+ (name spacedout)
+ (synopsis "Helpers to read and write space-separated data files")
+ (depends
+  (ppx_inline_test (or :build :with-test))))
 
 (package
  (name valet)

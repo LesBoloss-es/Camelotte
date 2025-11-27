@@ -68,42 +68,41 @@ let nonuple = tuple_9
 
 (* Tests *)
 
-let%test_module _ =
-  (module struct
-    let test cast value expected =
-      string_as cast value = expected
+let%test_module _ = (module struct
+  let test cast value expected =
+    string_as cast value = expected
 
-    let%test _ = test int 7 "7"
+  let%test _ = test int 7 "7"
 
-    let%test _ = test bit true "1"
-    let%test _ = test bit false "0"
+  let%test _ = test bit true "1"
+  let%test _ = test bit false "0"
 
-    let%test _ = test float 34.2 "34.2"
+  let%test _ = test float 34.2 "34.2"
 
-    let%test _ = test char 'Y' "Y"
+  let%test _ = test char 'Y' "Y"
 
-    let%test _ = test string "Bonjour" "Bonjour"
+  let%test _ = test string "Bonjour" "Bonjour"
 
-    let%test _ = test (list int) [1; 2; 7] "1 2 7"
-    let%test _ = test (list int) [] ""
+  let%test _ = test (list int) [1; 2; 7] "1 2 7"
+  let%test _ = test (list int) [] ""
 
-    let%test _ = test (array int) [|1; 2; 7|] "1 2 7"
-    let%test _ = test (array int) [||] ""
+  let%test _ = test (array int) [|1; 2; 7|] "1 2 7"
+  let%test _ = test (array int) [||] ""
 
-    let%test _ = test (pair int int) (7, 8) "7 8"
-    let%test _ = test (pair int float) (7, 34.2) "7 34.2"
-    let%test _ = test (tuple_2 int int) (8, 9) "8 9"
-    let%test _ = test (tuple_2 int float) (7, 34.2) "7 34.2"
+  let%test _ = test (pair int int) (7, 8) "7 8"
+  let%test _ = test (pair int float) (7, 34.2) "7 34.2"
+  let%test _ = test (tuple_2 int int) (8, 9) "8 9"
+  let%test _ = test (tuple_2 int float) (7, 34.2) "7 34.2"
 
-    let%test _ = test (tuple_3 int int int) (7, 8, 9) "7 8 9"
-    let%test _ = test (tuple_3 int float string) (7, 8., "9") "7 8 9"
-    let%test _ = test (tuple_3 int float string) (7, 8., "9 10") "7 8 9 10"
+  let%test _ = test (tuple_3 int int int) (7, 8, 9) "7 8 9"
+  let%test _ = test (tuple_3 int float string) (7, 8., "9") "7 8 9"
+  let%test _ = test (tuple_3 int float string) (7, 8., "9 10") "7 8 9 10"
 
-    let%test _ = test (tuple_4 int int int int) (7, 8, 9, 10) "7 8 9 10"
-    let%test _ = test (tuple_4 int float char string) (7, 8., '9', "10") "7 8 9 10"
-    let%test _ = test (tuple_4 int float char string) (7, 8., '9', "10 11") "7 8 9 10 11"
+  let%test _ = test (tuple_4 int int int int) (7, 8, 9, 10) "7 8 9 10"
+  let%test _ = test (tuple_4 int float char string) (7, 8., '9', "10") "7 8 9 10"
+  let%test _ = test (tuple_4 int float char string) (7, 8., '9', "10 11") "7 8 9 10 11"
 
-    let%test _ = test (tuple_5 int int int int int) (7, 8, 9, 10, 11) "7 8 9 10 11"
-    let%test _ = test (tuple_5 int float bit char string) (7, 8., true, '9', "10") "7 8 1 9 10"
-    let%test _ = test (tuple_5 int float bit char string) (7, 8., false, '9', "10 11") "7 8 0 9 10 11"
-  end)
+  let%test _ = test (tuple_5 int int int int int) (7, 8, 9, 10, 11) "7 8 9 10 11"
+  let%test _ = test (tuple_5 int float bit char string) (7, 8., true, '9', "10") "7 8 1 9 10"
+  let%test _ = test (tuple_5 int float bit char string) (7, 8., false, '9', "10 11") "7 8 0 9 10 11"
+end)

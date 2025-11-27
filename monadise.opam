@@ -3,6 +3,7 @@ opam-version: "2.0"
 synopsis: "Monadise direct-style functions easily"
 maintainer: ["Niols <niols@niols.fr>"]
 authors: ["Niols <niols@niols.fr>"]
+license: "MIT"
 homepage: "https://github.com/niols/camelotte"
 bug-reports: "https://github.com/niols/camelotte/issues"
 depends: [

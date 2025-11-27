@@ -4,6 +4,7 @@ synopsis:
   "An OCaml preprocessor allowing to declare types from `let`-bindings with a preceeding `val` declaration."
 maintainer: ["Niols <niols@niols.fr>"]
 authors: ["Niols <niols@niols.fr>"]
+license: "MIT"
 homepage: "https://github.com/niols/camelotte"
 bug-reports: "https://github.com/niols/camelotte/issues"
 depends: [
