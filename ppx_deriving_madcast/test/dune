@@ -6,7 +6,9 @@
  (deps
   ./standalone.exe
   (source_tree positive)
-  (source_tree negative)))
+  (source_tree negative))
+ (enabled_if
+  (<> %{system} mingw64)))
 
 (executable
  (name standalone)
