@@ -1,0 +1,4 @@
+(test
+ (package next)
+ (name run)
+ (libraries next alcotest str))

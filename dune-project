@@ -33,7 +33,7 @@
  (synopsis "Niols's extended standard library")
  (authors "Niols <niols@niols.fr>")
  (depends
-  (ppx_inline_test (or :build :with-test))))
+  (alcotest :with-test)))
 
 (package
  (name ppx_deriving_madcast)
