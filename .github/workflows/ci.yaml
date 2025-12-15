@@ -109,7 +109,7 @@ jobs:
         run: opam exec -- dune build @doc
       - name: Upload documentation artifact
         if: matrix.system == 'ubuntu-latest'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _build/default/_doc/_html
 
