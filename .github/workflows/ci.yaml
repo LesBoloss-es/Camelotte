@@ -140,6 +140,7 @@ jobs:
     name: Deploy documentation
     needs: opam-all
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
