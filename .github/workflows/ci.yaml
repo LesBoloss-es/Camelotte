@@ -28,8 +28,9 @@ jobs:
           - monadise
           - monadise-lwt
           - next
-          - ppx_monad
+          - ppx_deriving_biniou
           - ppx_deriving_madcast
+          - ppx_monad
           - spacedout
           - testu01
           - valet
@@ -65,8 +66,9 @@ jobs:
           - monadise
           - monadise-lwt
           - next
-          - ppx_monad
+          - ppx_deriving_biniou
           - ppx_deriving_madcast
+          - ppx_monad
           - spacedout
           - testu01
           - valet

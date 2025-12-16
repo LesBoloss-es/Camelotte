@@ -28,6 +28,7 @@
       imports = [
         ./monadise/flake-part.nix
         ./next/flake-part.nix
+        ./ppx_deriving_biniou/flake-part.nix
         ./ppx_deriving_madcast/flake-part.nix
         ./ppx_monad/flake-part.nix
         ./spacedout/flake-part.nix
@@ -60,6 +61,7 @@
             inputsFrom = with self'.packages; [
               monadise
               monadise-lwt
+              ppx_deriving_biniou
               ppx_deriving_madcast
               ppx_monad
               spacedout

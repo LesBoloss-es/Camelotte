@@ -1,0 +1,16 @@
+(library
+ (public_name ppx_deriving_biniou)
+ (name ppx_deriving_biniou)
+ (libraries ppx_deriving.api)
+ (kind ppx_deriver)
+ (preprocess
+  (pps ppxlib.metaquot))
+ (modules ppx_deriving_biniou))
+
+(library
+ (public_name ppx_deriving_biniou.runtime)
+ (name ppx_deriving_biniou_runtime)
+ (libraries biniou)
+ (preprocess
+  (staged_pps ppx_import ppx_deriving.show))
+ (modules ppx_deriving_biniou_runtime))
