@@ -78,6 +78,21 @@
   (alcotest :with-test)))
 
 (package
+ (name testu01)
+ (synopsis "OCaml bindings for TestU01 (and Probdist and MyLib)")
+ (authors
+  "Niols <niols@niols.fr>"
+  "Kerl <kerl@wkerl.me>")
+ (license GPL-3.0-or-later)
+ (description "This package provides OCaml bindings for TestU01 1.2.3, as well
+  as Probdist and Mylib. TestU01 is a software library, implemented in C, and
+  offering a collection of utilities for the empirical statistical testing of
+  uniform random number generators. The OCaml bindings allow for easy testing of
+  random number generators written in OCaml and that claim to be uniform.")
+ (depends
+  (ocaml  (>= 4.06.0))))
+
+(package
  (name valet)
  (synopsis "An OCaml preprocessor allowing to declare types from `let`-bindings with a preceeding `val` declaration")
  (authors "Niols <niols@niols.fr>")

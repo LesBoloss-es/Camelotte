@@ -1,0 +1,4 @@
+(library
+ (name testu01_dummy_module)
+ (public_name testu01)
+ (libraries testu01.testu01 testu01.probdist))

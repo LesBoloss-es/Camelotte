@@ -1,0 +1,231 @@
+(library
+ (name testu01_vendor)
+ (public_name testu01.vendor)
+ (preprocess no_preprocessing)
+ (foreign_archives testu01_vendor probdist_vendor mylib_vendor))
+
+;; NOTE: We duplicate the rule to handle file name subtleties between Linux and macOS.
+
+(rule
+ (targets
+  libtestu01_vendor.a
+  dlltestu01_vendor.so
+  libprobdist_vendor.a
+  dllprobdist_vendor.so
+  libmylib_vendor.a
+  dllmylib_vendor.so
+  addstr.h
+  bbattery.h
+  bitset.h
+  chrono.h
+  config.h
+  fbar.h
+  fcho.h
+  fcong.h
+  fdist.h
+  ffam.h
+  ffsr.h
+  finv.h
+  fknuth.h
+  fmarsa.h
+  fmass.h
+  fmultin.h
+  fnpair.h
+  fres.h
+  fspectral.h
+  fstring.h
+  ftab.h
+  fvaria.h
+  fwalk.h
+  gdefconf.h
+  gdef.h
+  gofs.h
+  gofw.h
+  mystr.h
+  num2.h
+  num.h
+  rijndael-alg-fst.h
+  scatter.h
+  scomp.h
+  sentrop.h
+  sknuth.h
+  smarsa.h
+  smultin.h
+  snpair.h
+  sres.h
+  sspacings.h
+  sspectral.h
+  sstring.h
+  statcoll.h
+  svaria.h
+  swalk.h
+  swrite.h
+  tables.h
+  tu01_sha1.h
+  uautomata.h
+  ubrent.h
+  ucarry.h
+  ucrypto.h
+  ucubic.h
+  udeng.h
+  ufile.h
+  ugfsr.h
+  ugranger.h
+  uinv.h
+  uknuth.h
+  ulcg.h
+  ulec.h
+  umarsa.h
+  umrg.h
+  unif01.h
+  unumrec.h
+  uquad.h
+  usoft.h
+  utaus.h
+  utezuka.h
+  util.h
+  utouzin.h
+  uvaria.h
+  uweyl.h
+  uwu.h
+  uxorshift.h
+  vectorsF2.h
+  wdist.h)
+ (deps
+  (source_tree TestU01-2009))
+ (action
+  (progn
+   (chdir
+    TestU01-2009
+    (progn
+     ;; NOTE: No prefix is a hack to satisfy Nix and avoid the error `impure
+     ;; path `<prefix>' used in link`. Considering how we grab the built
+     ;; artefacts, it doesn't actually matter.
+     (system "./configure --prefix=")
+     ;; NOTE: TestU01 is old, and it is unlikely that we will have versions of
+     ;; the auto* tools that still work. We disable them explicitly, to prevent
+     ;; ./configure from picking them up only for them to fail later on.
+     (system "make AUTOCONF=true AUTOHEADER=true AUTOMAKE=true ACLOCAL=true")
+     (system "cp include/*.h ..")
+     (no-infer
+      (progn
+       (copy testu01/.libs/libtestu01.a ../libtestu01_vendor.a)
+       (copy testu01/.libs/libtestu01.so ../dlltestu01_vendor.so)
+       (copy probdist/.libs/libprobdist.a ../libprobdist_vendor.a)
+       (copy probdist/.libs/libprobdist.so ../dllprobdist_vendor.so)
+       (copy mylib/.libs/libmylib.a ../libmylib_vendor.a)
+       (copy mylib/.libs/libmylib.so ../dllmylib_vendor.so)))))))
+ (enabled_if
+  (<> %{ocaml-config:system} macosx)))
+
+(rule
+ (targets
+  libtestu01_vendor.a
+  dlltestu01_vendor.so
+  libprobdist_vendor.a
+  dllprobdist_vendor.so
+  libmylib_vendor.a
+  dllmylib_vendor.so
+  addstr.h
+  bbattery.h
+  bitset.h
+  chrono.h
+  config.h
+  fbar.h
+  fcho.h
+  fcong.h
+  fdist.h
+  ffam.h
+  ffsr.h
+  finv.h
+  fknuth.h
+  fmarsa.h
+  fmass.h
+  fmultin.h
+  fnpair.h
+  fres.h
+  fspectral.h
+  fstring.h
+  ftab.h
+  fvaria.h
+  fwalk.h
+  gdefconf.h
+  gdef.h
+  gofs.h
+  gofw.h
+  mystr.h
+  num2.h
+  num.h
+  rijndael-alg-fst.h
+  scatter.h
+  scomp.h
+  sentrop.h
+  sknuth.h
+  smarsa.h
+  smultin.h
+  snpair.h
+  sres.h
+  sspacings.h
+  sspectral.h
+  sstring.h
+  statcoll.h
+  svaria.h
+  swalk.h
+  swrite.h
+  tables.h
+  tu01_sha1.h
+  uautomata.h
+  ubrent.h
+  ucarry.h
+  ucrypto.h
+  ucubic.h
+  udeng.h
+  ufile.h
+  ugfsr.h
+  ugranger.h
+  uinv.h
+  uknuth.h
+  ulcg.h
+  ulec.h
+  umarsa.h
+  umrg.h
+  unif01.h
+  unumrec.h
+  uquad.h
+  usoft.h
+  utaus.h
+  utezuka.h
+  util.h
+  utouzin.h
+  uvaria.h
+  uweyl.h
+  uwu.h
+  uxorshift.h
+  vectorsF2.h
+  wdist.h)
+ (deps
+  (source_tree TestU01-2009))
+ (action
+  (progn
+   (chdir
+    TestU01-2009
+    (progn
+     ;; NOTE: No prefix is a hack to satisfy Nix and avoid the error `impure
+     ;; path `<prefix>' used in link`. Considering how we grab the built
+     ;; artefacts, it doesn't actually matter.
+     (system "./configure --prefix=")
+     ;; NOTE: TestU01 is old, and it is unlikely that we will have versions of
+     ;; the auto* tools that still work. We disable them explicitly, to prevent
+     ;; ./configure from picking them up only for them to fail later on.
+     (system "make AUTOCONF=true AUTOHEADER=true AUTOMAKE=true ACLOCAL=true")
+     (system "cp include/*.h ..")
+     (no-infer
+      (progn
+       (copy testu01/.libs/libtestu01.a ../libtestu01_vendor.a)
+       (copy testu01/.libs/libtestu01.dylib ../dlltestu01_vendor.so)
+       (copy probdist/.libs/libprobdist.a ../libprobdist_vendor.a)
+       (copy probdist/.libs/libprobdist.dylib ../dllprobdist_vendor.so)
+       (copy mylib/.libs/libmylib.a ../libmylib_vendor.a)
+       (copy mylib/.libs/libmylib.dylib ../dllmylib_vendor.so)))))))
+ (enabled_if
+  (= %{ocaml-config:system} macosx)))

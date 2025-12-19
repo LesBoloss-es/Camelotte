@@ -11,6 +11,10 @@
       url = "github:tweag/topiary";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    ## NOTE: We use submodules to vendor things (eg. TestU01), so Nix needs to
+    ## grab them too as part of `self`.
+    self.submodules = true;
   };
 
   outputs =
@@ -27,6 +31,7 @@
         ./ppx_deriving_madcast/flake-part.nix
         ./ppx_monad/flake-part.nix
         ./spacedout/flake-part.nix
+        ./testu01/flake-part.nix
         ./valet/flake-part.nix
       ];
 
@@ -58,6 +63,7 @@
               ppx_deriving_madcast
               ppx_monad
               spacedout
+              testu01
               valet
             ];
             inherit (self'.checks.git-hooks) shellHook;
