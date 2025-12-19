@@ -11,6 +11,10 @@
       url = "github:tweag/topiary";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    ## NOTE: We use submodules to vendor things (eg. TestU01), so Nix needs to
+    ## grab them too as part of `self`.
+    self.submodules = true;
   };
 
   outputs =
