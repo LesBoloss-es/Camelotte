@@ -90,8 +90,7 @@
   uniform random number generators. The OCaml bindings allow for easy testing of
   random number generators written in OCaml and that claim to be uniform.")
  (depends
-  (ocaml  (>= 4.06.0))
-  (md2mld (or :build :with-doc))))
+  (ocaml  (>= 4.06.0))))
 
 (package
  (name valet)

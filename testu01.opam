@@ -15,7 +15,6 @@ bug-reports: "https://github.com/niols/camelotte/issues"
 depends: [
   "dune" {>= "3.20"}
   "ocaml" {>= "4.06.0"}
-  "md2mld" {build | with-doc}
   "odoc" {with-doc}
 ]
 build: [
