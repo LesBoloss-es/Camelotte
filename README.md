@@ -21,6 +21,8 @@ You can also visit the [API documentation] for these packages.
   their types
 - [ppx_monad](ppx_monad/) — Syntax extension for all monadic syntaxes
 - [SpacedOut](spacedout/) — Helpers to read and write space-separated data files
+- [TestU01](testu01/) — Bindings for [TestU01](https://simul.iro.umontreal.ca/testu01/tu01.html),
+  “a collection of utilities for the empirical statistical testing of uniform random number generators.”
 - [Valet](valet/) — Declare types from `let`-bindings with a preceeding `val`
   declaration
 

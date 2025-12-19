@@ -21,6 +21,7 @@
 
 (rule
  (alias runtest)
+ (package testu01)
  (action
   (diff bat1.output bat1.expected))
  (enabled_if %{arch_sixtyfour}))

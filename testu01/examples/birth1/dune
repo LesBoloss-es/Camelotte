@@ -23,6 +23,7 @@
 
 (rule
  (alias runtest)
+ (package testu01)
  (action
   (diff birth1.output birth1.expected))
  (enabled_if %{arch_sixtyfour}))

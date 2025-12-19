@@ -27,6 +27,7 @@
         ./ppx_deriving_madcast/flake-part.nix
         ./ppx_monad/flake-part.nix
         ./spacedout/flake-part.nix
+        ./testu01/flake-part.nix
         ./valet/flake-part.nix
       ];
 
@@ -58,6 +59,7 @@
               ppx_deriving_madcast
               ppx_monad
               spacedout
+              testu01
               valet
             ];
             inherit (self'.checks.git-hooks) shellHook;

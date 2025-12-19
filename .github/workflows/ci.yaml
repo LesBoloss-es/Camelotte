@@ -31,6 +31,7 @@ jobs:
           - ppx_monad
           - ppx_deriving_madcast
           - spacedout
+          - testu01
           - valet
     name: Nix (${{ matrix.package }})
     runs-on: ubuntu-latest
@@ -65,6 +66,7 @@ jobs:
           - ppx_monad
           - ppx_deriving_madcast
           - spacedout
+          - testu01
           - valet
     name: OPAM (${{matrix.package}})
     runs-on: ubuntu-latest
