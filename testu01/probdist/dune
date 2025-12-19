@@ -1,5 +1,7 @@
 (library
  (name Probdist)
  (public_name testu01.probdist)
- (foreign_stubs (language c) (names gofw_stubs))
+ (foreign_stubs
+  (language c)
+  (names gofw_stubs))
  (libraries testu01.vendor))

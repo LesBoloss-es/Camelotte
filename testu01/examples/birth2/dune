@@ -3,4 +3,6 @@
  (libraries testu01))
 
 (rule
- (with-stdout-to birth2.output (run ./birth2.exe)))
+ (with-stdout-to
+  birth2.output
+  (run ./birth2.exe)))

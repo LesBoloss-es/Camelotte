@@ -1,6 +1,12 @@
-external birthday_spacings : Unif01.gen -> Sres.poisson option -> int -> int ->
-  int -> int -> int -> int -> unit =
-  "camlbytecode_smarsa_BirthdaySpacings" "caml_smarsa_BirthdaySpacings"
+external birthday_spacings : Unif01.gen ->
+Sres.poisson option ->
+int ->
+int ->
+int ->
+int ->
+int ->
+int ->
+unit = "camlbytecode_smarsa_BirthdaySpacings" "caml_smarsa_BirthdaySpacings"
 
 (** [birthday_spacings gen res N n r d t p] implements the birthday spacings
    test proposed in Marsaglia 1985 ({i A current view of random number

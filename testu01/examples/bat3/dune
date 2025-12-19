@@ -5,4 +5,6 @@
 (rule
  (deps vax.bin)
  (action
-  (with-stdout-to bat3.output (run ./bat3.exe))))
+  (with-stdout-to
+   bat3.output
+   (run ./bat3.exe))))
