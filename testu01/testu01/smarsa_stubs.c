@@ -21,8 +21,8 @@ value caml_smarsa_BirthdaySpacings(value bgen, value obpoisson, value N, value n
 
   sres_Poisson* poisson = NULL;
 
-  if (Is_block(obpoisson)) { /* if obpoisson = Some ... */
-    value bpoisson = Field(obpoisson, 1);
+  if (Is_block(obpoisson) && Tag_val(obpoisson) == 0) { /* if obpoisson = Some ... */
+    value bpoisson = Field(obpoisson, 0);
     poisson = sres_Poisson_unbox(bpoisson);
   }
 

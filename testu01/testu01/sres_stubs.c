@@ -29,5 +29,5 @@ value caml_sres_CreatePoisson(value unit) {
   CAMLlocal1(bpoisson);
   sres_Poisson* poisson = sres_CreatePoisson();
   sres_Poisson_box(poisson, bpoisson, sres_Poisson_boxed);
-  CAMLreturn(Val_unit);
+  CAMLreturn(bpoisson);
 }
