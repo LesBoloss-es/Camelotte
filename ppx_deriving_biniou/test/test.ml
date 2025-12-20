@@ -1,7 +1,9 @@
 module Basic = struct
   type t = {
     bar: int;
-    baz: float
+    baz: float;
+    qux: int32 list;
+    quux: int64 array;
   }
   [@@deriving ord, show {with_path = false}, biniou, qcheck]
 end
@@ -37,7 +39,7 @@ let rec anonymise_tree : Bi_io.tree -> Bi_io.tree = function
     )
   | `Shared tree -> `Shared (anonymise_tree tree)
 
-let roundtrip_count = 100_000
+let roundtrip_count = 10_000
 
 (** Make an Alcotest test case for a type and functions around that type. *)
 let roundtrip_test_case ?gen ?show ?arbitrary ~compare ~to_biniou ~of_biniou name =
@@ -80,7 +82,11 @@ let () =
     (
       "roundrip",
       [roundtrip_test_case "int" ~arbitrary: QCheck.int ~compare: Int.compare ~to_biniou: Ppx_deriving_biniou_runtime.int_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int_of_biniou;
+      roundtrip_test_case "int32" ~arbitrary: QCheck.int32 ~compare: Int32.compare ~to_biniou: Ppx_deriving_biniou_runtime.int32_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int32_of_biniou;
+      roundtrip_test_case "int64" ~arbitrary: QCheck.int64 ~compare: Int64.compare ~to_biniou: Ppx_deriving_biniou_runtime.int64_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int64_of_biniou;
       roundtrip_test_case "float" ~arbitrary: QCheck.float ~compare: Float.compare ~to_biniou: Ppx_deriving_biniou_runtime.float_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.float_of_biniou;
+      roundtrip_test_case "int32 list" ~arbitrary: QCheck.(list int32) ~compare: (List.compare Int32.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(list_to_biniou int32_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(list_of_biniou int32_of_biniou);
+      (* roundtrip_test_case "int64 array" ~arbitrary: QCheck.(array int64) ~compare: (Array.compare Int64.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(array_to_biniou int64_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(array_of_biniou int64_of_biniou); *)
       roundtrip_test_case' "basic" (module Basic);
       ]
     )

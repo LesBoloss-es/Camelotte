@@ -19,10 +19,24 @@ let int_of_biniou : tree -> int = function
   | `Int16 x | `Uvint x | `Svint x -> x
   | t -> could_not_convert "int_of_biniou" t
 
+let int32_to_biniou : int32 -> tree = fun x -> `Int32 x
+let int32_of_biniou : tree -> int32 = function `Int32 x -> x | t -> could_not_convert "int32_of_biniou" t
+
+let int64_to_biniou : int64 -> tree = fun x -> `Int64 x
+let int64_of_biniou : tree -> int64 = function `Int64 x -> x | t -> could_not_convert "int64_of_biniou" t
+
 let float_to_biniou : float -> tree = fun x -> `Float64 x
-let float_of_biniou : tree -> float = function
-  | `Float32 x | `Float64 x -> x
-  | t -> could_not_convert "float_of_biniou" t
+let float_of_biniou : tree -> float = function `Float32 x | `Float64 x -> x | t -> could_not_convert "float_of_biniou" t
+
+(* NOTE: Biniou has a notion of arrays, but they are really meant as
+   heterogeneous arrays, which does not match the notion in OCaml. *)
+let array_to_biniou (a_to_biniou : 'a -> tree) : 'a array -> tree = fun l -> `Tuple (Array.map a_to_biniou l)
+let array_of_biniou (a_of_biniou : tree -> 'a) : tree -> 'a array = function `Tuple a -> Array.map a_of_biniou a | t -> could_not_convert "array_of_biniou" t
+
+(* NOTE: Biniou has a notion of arrays, but they are really meant as
+   heterogeneous arrays, which does not match the notion in OCaml. *)
+let list_to_biniou (a_to_biniou : 'a -> tree) : 'a list -> tree = fun l -> `Tuple (Array.of_list (List.map a_to_biniou l))
+let list_of_biniou (a_of_biniou : tree -> 'a) : tree -> 'a list = function `Tuple a -> List.map a_of_biniou (Array.to_list a) | t -> could_not_convert "list_of_biniou" t
 
 (** Given the content of a Biniou record, look for the tree corresponding to the
     given string by comparing it to the hashes. If it isn't found, the name

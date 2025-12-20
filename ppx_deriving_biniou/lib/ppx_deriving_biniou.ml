@@ -20,9 +20,21 @@ type functions = {
   of_biniou: expression;
 }
 
+type direction = To_biniou | Of_biniou
+
+let direction_to_string = function
+  | To_biniou -> "to_biniou"
+  | Of_biniou -> "of_biniou"
+
+let mangle_lid dir lid =
+  Ppx_deriving.mangle_lid (`Suffix (direction_to_string dir)) lid
+
+let mangle_type_decl dir td =
+  Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string dir)) td
+
 (** Given a core_type, return Parsetree expressions that are functions to
     convert to and from biniou. *)
-let core_type_to_functions (core_type : core_type) : functions =
+let rec core_type_to_functions (core_type : core_type) : functions =
   let loc = core_type.ptyp_loc in
   match core_type.ptyp_desc with
   (* | Ptyp_any *)
@@ -38,18 +50,31 @@ let core_type_to_functions (core_type : core_type) : functions =
   (* | Ptyp_open of Longident.t Asttypes.loc * core_type *)
   (* | Ptyp_extension of extension *)
   (* | Ptyp_constr of Longident.t Asttypes.loc * core_type list *)
-  | Ptyp_constr (ty, args) when args = [] ->
-    let in_runtime_lib = [Lident "int"; Lident "float"] in
-    let ty_txt =
-      if List.mem ty.txt in_runtime_lib then
-        ldotl "Ppx_deriving_biniou_runtime" ty.txt
-      else ty.txt
-    in
-    {
-      to_biniou = pexp_ident ~loc {txt = Ppx_deriving.mangle_lid (`Suffix "to_biniou") ty_txt; loc = ty.loc};
-      of_biniou = pexp_ident ~loc {txt = Ppx_deriving.mangle_lid (`Suffix "of_biniou") ty_txt; loc = ty.loc};
-    }
-  | _ -> Location.raise_errorf ~loc "core_type"
+  | Ptyp_constr (ty, args) ->
+    (
+      let in_runtime_lib =
+        List.map (fun x -> Lident x) ["int"; "int32"; "int64"; "float"; "array"; "list"]
+      in
+      let ty_txt =
+        if List.mem ty.txt in_runtime_lib then
+          ldotl "Ppx_deriving_biniou_runtime" ty.txt
+        else ty.txt
+      in
+      let fns = {
+        to_biniou = pexp_ident ~loc {txt = mangle_lid To_biniou ty_txt; loc = ty.loc};
+        of_biniou = pexp_ident ~loc {txt = mangle_lid Of_biniou ty_txt; loc = ty.loc};
+      }
+      in
+      match args with
+      | [] -> fns
+      | args ->
+        let args_fns = List.map core_type_to_functions args in
+        {
+          to_biniou = pexp_apply ~loc fns.to_biniou (List.map (fun arg_fns -> (Nolabel, arg_fns.to_biniou)) args_fns);
+          of_biniou = pexp_apply ~loc fns.of_biniou (List.map (fun arg_fns -> (Nolabel, arg_fns.of_biniou)) args_fns);
+        }
+    )
+  | _ -> Location.raise_errorf ~loc "core_type: cannot convert to/from Biniou"
 
 (** Given a type_decl, return Parsetree expressions that are functions to
     convert to and from biniou. *)
@@ -78,7 +103,7 @@ let type_decl_to_functions (type_decl : type_declaration) : functions =
         )
         lab_decls
     in
-    let of_biniou_name = Ppx_deriving.mangle_type_decl (`Suffix "of_biniou") type_decl in
+    let of_biniou_name = mangle_type_decl Of_biniou type_decl in
     let of_biniou =
       pexp_function_cases ~loc [
         (
@@ -155,7 +180,7 @@ let type_decl_str
         let loc = type_decl.ptype_loc in
         value_binding
           ~loc
-          ~pat: (ppat_var ~loc {txt = Ppx_deriving.mangle_type_decl (`Suffix "to_biniou") type_decl; loc})
+          ~pat: (ppat_var ~loc {txt = mangle_type_decl To_biniou type_decl; loc})
           ~expr: functions.to_biniou
       )
       type_decls
@@ -166,7 +191,7 @@ let type_decl_str
           let loc = type_decl.ptype_loc in
           value_binding
             ~loc
-            ~pat: (ppat_var ~loc {txt = Ppx_deriving.mangle_type_decl (`Suffix "of_biniou") type_decl; loc})
+            ~pat: (ppat_var ~loc {txt = mangle_type_decl Of_biniou type_decl; loc})
             ~expr: functions.of_biniou
         )
         type_decls
