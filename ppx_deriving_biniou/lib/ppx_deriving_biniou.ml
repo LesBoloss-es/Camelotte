@@ -15,11 +15,6 @@ let rec ldotl x = function
   | Ldot (l, s) -> Ldot (ldotl x l, s)
   | Lapply _ -> failwith "ldotl"
 
-type functions = {
-  to_biniou: expression;
-  of_biniou: expression;
-}
-
 type direction = To_biniou | Of_biniou
 
 let direction_to_string = function
@@ -32,9 +27,9 @@ let mangle_lid dir lid =
 let mangle_type_decl dir td =
   Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string dir)) td
 
-(** Given a core_type, return Parsetree expressions that are functions to
-    convert to and from biniou. *)
-let rec core_type_to_functions (core_type : core_type) : functions =
+(** Given a core_type, return a Parsetree expression that is a function
+    converting to or from biniou, depending on the direction argument.. *)
+let rec core_type_to_function (dir : direction) (core_type : core_type) : expression =
   let loc = core_type.ptyp_loc in
   match core_type.ptyp_desc with
   (* | Ptyp_any *)
@@ -60,108 +55,96 @@ let rec core_type_to_functions (core_type : core_type) : functions =
           ldotl "Ppx_deriving_biniou_runtime" ty.txt
         else ty.txt
       in
-      let fns = {
-        to_biniou = pexp_ident ~loc {txt = mangle_lid To_biniou ty_txt; loc = ty.loc};
-        of_biniou = pexp_ident ~loc {txt = mangle_lid Of_biniou ty_txt; loc = ty.loc};
-      }
-      in
+      let fn = pexp_ident ~loc {txt = mangle_lid dir ty_txt; loc = ty.loc} in
       match args with
-      | [] -> fns
+      | [] -> fn
       | args ->
-        let args_fns = List.map core_type_to_functions args in
-        {
-          to_biniou = pexp_apply ~loc fns.to_biniou (List.map (fun arg_fns -> (Nolabel, arg_fns.to_biniou)) args_fns);
-          of_biniou = pexp_apply ~loc fns.of_biniou (List.map (fun arg_fns -> (Nolabel, arg_fns.of_biniou)) args_fns);
-        }
+        let args_fns = List.map (core_type_to_function dir) args in
+        pexp_apply ~loc fn (List.map (fun arg_fn -> (Nolabel, arg_fn)) args_fns)
     )
   | _ -> Location.raise_errorf ~loc "core_type: cannot convert to/from Biniou"
 
 (** Given a type_decl, return Parsetree expressions that are functions to
     convert to and from biniou. *)
-let type_decl_to_functions (type_decl : type_declaration) : functions =
+let type_decl_to_function (dir : direction) (type_decl : type_declaration) : expression =
   let loc = type_decl.ptype_loc in
-  match type_decl.ptype_kind with
-  | Ptype_record lab_decls ->
-    let to_biniou =
-      pexp_fun ~loc Nolabel None (pvar ~loc "x") @@
-      pexp_variant ~loc "Record" @@
-      some @@
-      pexp_array ~loc @@
-      List.map
-        (fun lab_decl ->
-          let loc = lab_decl.pld_loc in
-          let name = lab_decl.pld_name.txt in
-          let pexp_name = let loc = lab_decl.pld_name.loc in pexp_constant ~loc (Pconst_string (name, loc, None)) in
-          pexp_tuple ~loc [
-            pexp_construct ~loc (longident ~loc "Some") (Some pexp_name);
-            pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
+  match type_decl.ptype_kind, dir with
+  | Ptype_record lab_decls, To_biniou ->
+    pexp_fun ~loc Nolabel None (pvar ~loc "x") @@
+    pexp_variant ~loc "Record" @@
+    some @@
+    pexp_array ~loc @@
+    List.map
+      (fun lab_decl ->
+        let loc = lab_decl.pld_loc in
+        let name = lab_decl.pld_name.txt in
+        let pexp_name = let loc = lab_decl.pld_name.loc in pexp_constant ~loc (Pconst_string (name, loc, None)) in
+        pexp_tuple ~loc [
+          pexp_construct ~loc (longident ~loc "Some") (Some pexp_name);
+          pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
+          pexp_apply
+            ~loc
+            (core_type_to_function dir lab_decl.pld_type)
+            [(Nolabel, pexp_field ~loc (pexp_ident ~loc (longident ~loc "x")) (longident ~loc name))]
+        ]
+      )
+      lab_decls
+  | Ptype_record lab_decls, Of_biniou ->
+    pexp_function_cases ~loc [
+      (
+        case
+          ~lhs: (
+            ppat_variant ~loc "Record" (Some (pvar ~loc "r"))
+          )
+          ~guard: None
+          ~rhs: (
+            pexp_record
+              ~loc
+              (
+                List.map
+                  (fun lab_decl ->
+                    let loc = lab_decl.pld_loc in
+                    let name = lab_decl.pld_name.txt in
+                    (
+                      longident ~loc name,
+                      pexp_apply
+                        ~loc
+                        (core_type_to_function dir lab_decl.pld_type)
+                        [
+                          (
+                            Nolabel,
+                            pexp_apply
+                              ~loc
+                              (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.record_find")
+                              [
+                                (Labelled "name", pexp_constant ~loc (Pconst_string (mangle_type_decl Of_biniou type_decl, loc, None)));
+                                (Nolabel, pexp_constant ~loc (Pconst_string (name, loc, None)));
+                                (Nolabel, pexp_ident ~loc (longident ~loc "r"));
+                              ]
+                          )
+                        ]
+                    )
+                  )
+                  lab_decls
+              )
+              None
+          )
+      );
+      (
+        case
+          ~lhs: (pvar ~loc "t")
+          ~guard: None
+          ~rhs: (
             pexp_apply
               ~loc
-              (core_type_to_functions lab_decl.pld_type).to_biniou
-              [(Nolabel, pexp_field ~loc (pexp_ident ~loc (longident ~loc "x")) (longident ~loc name))]
-          ]
-        )
-        lab_decls
-    in
-    let of_biniou_name = mangle_type_decl Of_biniou type_decl in
-    let of_biniou =
-      pexp_function_cases ~loc [
-        (
-          case
-            ~lhs: (
-              ppat_variant ~loc "Record" (Some (pvar ~loc "r"))
-            )
-            ~guard: None
-            ~rhs: (
-              pexp_record
-                ~loc
-                (
-                  List.map
-                    (fun lab_decl ->
-                      let loc = lab_decl.pld_loc in
-                      let name = lab_decl.pld_name.txt in
-                      (
-                        longident ~loc name,
-                        pexp_apply
-                          ~loc
-                          (core_type_to_functions lab_decl.pld_type).of_biniou
-                          [
-                            (
-                              Nolabel,
-                              pexp_apply
-                                ~loc
-                                (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.record_find")
-                                [
-                                  (Labelled "name", pexp_constant ~loc (Pconst_string (of_biniou_name, loc, None)));
-                                  (Nolabel, pexp_constant ~loc (Pconst_string (name, loc, None)));
-                                  (Nolabel, pexp_ident ~loc (longident ~loc "r"));
-                                ]
-                            )
-                          ]
-                      )
-                    )
-                    lab_decls
-                )
-                None
-            )
-        );
-        (
-          case
-            ~lhs: (pvar ~loc "t")
-            ~guard: None
-            ~rhs: (
-              pexp_apply
-                ~loc
-                (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.could_not_convert")
-                [
-                  (Nolabel, pexp_constant ~loc (Pconst_string (of_biniou_name, loc, None)));
-                  (Nolabel, pexp_ident ~loc (longident ~loc "t"));
-                ]
-            )
-        );
-      ]
-    in
-      {to_biniou; of_biniou}
+              (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.could_not_convert")
+              [
+                (Nolabel, pexp_constant ~loc (Pconst_string (mangle_type_decl Of_biniou type_decl, loc, None)));
+                (Nolabel, pexp_ident ~loc (longident ~loc "t"));
+              ]
+          )
+      );
+    ]
   | _ -> Location.raise_errorf ~loc "type_decl"
 
 let type_decl_str
@@ -172,29 +155,21 @@ let type_decl_str
   =
   ignore options;
   ignore path;
-  let type_decls = List.map (fun type_decl -> (type_decl, type_decl_to_functions type_decl)) type_decls in
   (* FIXME: loc *)
-  pstr_value_list ~loc: Location.none Nonrecursive (
-    List.map
-      (fun (type_decl, functions) ->
-        let loc = type_decl.ptype_loc in
-        value_binding
-          ~loc
-          ~pat: (ppat_var ~loc {txt = mangle_type_decl To_biniou type_decl; loc})
-          ~expr: functions.to_biniou
+  List.concat_map
+    (fun dir ->
+      pstr_value_list ~loc: Location.none Nonrecursive (
+        List.map
+          (fun type_decl ->
+            let loc = type_decl.ptype_loc in
+            value_binding
+              ~loc
+              ~pat: (ppat_var ~loc {txt = mangle_type_decl dir type_decl; loc})
+              ~expr: (type_decl_to_function dir type_decl)
+          )
+          type_decls
       )
-      type_decls
-  ) @
-    pstr_value_list ~loc: Location.none Nonrecursive (
-      List.map
-        (fun (type_decl, functions) ->
-          let loc = type_decl.ptype_loc in
-          value_binding
-            ~loc
-            ~pat: (ppat_var ~loc {txt = mangle_type_decl Of_biniou type_decl; loc})
-            ~expr: functions.of_biniou
-        )
-        type_decls
     )
+    [To_biniou; Of_biniou]
 
 let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ()))
