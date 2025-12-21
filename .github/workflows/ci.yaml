@@ -28,8 +28,9 @@ jobs:
           - monadise
           - monadise-lwt
           - next
-          - ppx_monad
+          - ppx_deriving_biniou
           - ppx_deriving_madcast
+          - ppx_monad
           - spacedout
           - testu01
           - valet
@@ -65,8 +66,9 @@ jobs:
           - monadise
           - monadise-lwt
           - next
-          - ppx_monad
+          - ppx_deriving_biniou
           - ppx_deriving_madcast
+          - ppx_monad
           - spacedout
           - testu01
           - valet
@@ -80,7 +82,7 @@ jobs:
       - name: Use OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 5
+          ocaml-compiler: 5.3
       - name: Install dependencies
         run: opam install ./${{matrix.package}}.opam --deps-only --with-test
       - name: Build
@@ -105,7 +107,7 @@ jobs:
       - name: Use OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 5
+          ocaml-compiler: 5.3
       - name: Install dependencies
         run: opam install . --deps-only --with-test
       - name: Build

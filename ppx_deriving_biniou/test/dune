@@ -1,0 +1,12 @@
+(test
+ (name roundtrip_test)
+ (package ppx_deriving_biniou)
+ (libraries biniou ppx_deriving_biniou.runtime qcheck-alcotest)
+ (preprocess
+  (pps ppx_deriving.std ppx_deriving_biniou ppx_deriving_qcheck)))
+
+(cram
+ (package ppx_deriving_biniou)
+ (deps
+  %{bin:ppx_deriving_biniou}
+  (package ppx_deriving_biniou)))

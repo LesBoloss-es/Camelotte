@@ -36,6 +36,21 @@
   (alcotest :with-test)))
 
 (package
+ (name ppx_deriving_biniou)
+ (synopsis "Convert types to and from Biniou")
+ (authors "Niols <niols@niols.fr>")
+ (depends
+   biniou
+  (dune          (and :build (>= "2.5")))
+  (ocaml         (>= "4.05.0"))
+  (odoc          :with-test)
+  (ppx_deriving  (and :build (>= "5.0")))
+   ppx_deriving_qcheck
+   ppx_import
+  (ppxlib        (>= "0.15.0"))
+   qcheck-alcotest))
+
+(package
  (name ppx_deriving_madcast)
  (version 0.2)
  (tags (syntax))

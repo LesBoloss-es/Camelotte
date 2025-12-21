@@ -1,0 +1,5 @@
+(executable
+ (package ppx_deriving_biniou)
+ (name ppx_deriving_biniou)
+ (public_name ppx_deriving_biniou)
+ (libraries ppx_deriving_biniou ppxlib.runner))
