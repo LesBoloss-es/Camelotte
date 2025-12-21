@@ -93,3 +93,35 @@ Record
     with
     | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
         Error (where, what)
+
+Variant
+-------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = Foo of int * float [@@deriving biniou]
+  > EOF
+  type t =
+    | Foo of int * float [@@deriving biniou]
+  let to_biniou =
+    (function
+     | Foo (arg0, arg1) ->
+         `Num_variant
+           (0,
+             (Some
+                (`Tuple
+                   [|(Ppx_deriving_biniou_runtime.int_to_biniou arg0);(
+                     Ppx_deriving_biniou_runtime.float_to_biniou arg1)|]))) : 
+    t -> Bi_io.tree)
+  let of_biniou_exn =
+    (function
+     | `Num_variant (0, Some (`Tuple [|arg0;arg1|])) ->
+         Foo
+           ((Ppx_deriving_biniou_runtime.int_of_biniou_exn arg0),
+             (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
+     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t : 
+    Bi_io.tree -> t)
+  let of_biniou x =
+    try Ok (of_biniou_exn x)
+    with
+    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+        Error (where, what)

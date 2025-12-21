@@ -15,6 +15,14 @@ module Alias = struct
   type t = (string * float) option [@@deriving ord, show, biniou {alias = false}, qcheck]
 end
 
+module Variant = struct
+  type t =
+    | Foo of int
+    | Bar of string list
+    | Baz of float * int32 array
+  [@@deriving ord, show, biniou {alias = false}, qcheck]
+end
+
 module TypeArguments = struct
   (* FIXME: I would like to check that there are no clashes it [type ('a, 'b) s
      = ('a * a * 'b)], by renaming [type c] to [type a], but ppx_deriving_qcheck
@@ -104,6 +112,7 @@ let () =
       (* roundtrip_test_case "int64 array" ~arbitrary: QCheck.(array int64) ~compare: (Array.compare Int64.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(array_to_biniou int64_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(array_of_biniou int64_of_biniou); *)
       roundtrip_test_case' "basic" (module Basic);
       roundtrip_test_case' "alias" (module Alias);
+      roundtrip_test_case' "variant" (module Variant);
       roundtrip_test_case' "type arguments" (module TypeArguments);
       ]
     )

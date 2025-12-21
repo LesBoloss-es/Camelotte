@@ -195,7 +195,74 @@ module Type_decl_to_serialiser : sig
     val type_decl_to_serialiser : dir: direction -> type_declaration -> expression
   end
 = struct
-  let ptype_record ~loc ~dir type_decl lab_decls =
+  let ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls =
+    let nums = List.mapi (fun i _ -> Pconst_integer (string_of_int i, None)) constr_decls in
+    let constr_decl_to_pieces constr_decl =
+      (* Given a constructor declaration, produce: the pattern and expression
+         for To_biniou, and the pattern and expression for Of_biniou. *)
+      match constr_decl.pcd_args with
+      | Pcstr_tuple [] ->
+        (
+          None,
+          [%expr None],
+          [%pat? None],
+          None
+        )
+      | Pcstr_tuple [arg] ->
+        (
+          Some [%pat? arg],
+          [%expr Some ([%e core_type_to_serialiser ~dir arg] arg)],
+          [%pat? Some arg],
+          Some [%expr [%e core_type_to_serialiser ~dir arg] arg]
+        )
+      | Pcstr_tuple args ->
+        let arg_names = List.mapi (fun i arg -> {txt = "arg" ^ string_of_int i; loc = arg.ptyp_loc}) args in
+        let arg_names' = List.map2 (fun arg_name arg -> pexp_ident ~loc: arg.ptyp_loc @@ map_location lident arg_name) arg_names args in
+        (
+          Some (ppat_tuple ~loc @@ List.map (ppat_var ~loc) arg_names),
+          [%expr Some (`Tuple [%e pexp_array ~loc (List.map2 (fun arg_name arg -> [%expr [%e core_type_to_serialiser ~dir arg] [%e arg_name]]) arg_names' args)])],
+          [%pat? Some (`Tuple[%p ppat_array ~loc @@ List.map (ppat_var ~loc) arg_names])],
+          Some (pexp_tuple ~loc (List.map2 (fun arg_name arg -> [%expr [%e core_type_to_serialiser ~dir arg] [%e arg_name]]) arg_names' args))
+        )
+      | Pcstr_record _ -> Location.raise_errorf ~loc "Ppx_deriving_runtime does not support records in constructors"
+    in
+    match dir with
+    | To_biniou ->
+      pexp_function_cases ~loc (
+        List.map2
+          (fun num constr_decl ->
+            let loc = constr_decl.pcd_loc in
+            let (pattern_arguments, constructor_arguments, _, _) = constr_decl_to_pieces constr_decl in
+            case
+              ~lhs: (ppat_construct ~loc (map_location lident constr_decl.pcd_name) pattern_arguments)
+              ~guard: None
+              ~rhs: (pexp_variant ~loc "Num_variant" @@ some @@ pexp_tuple ~loc [pexp_constant ~loc num; constructor_arguments])
+          )
+          nums
+          constr_decls
+      )
+    | Of_biniou ->
+      pexp_function_cases ~loc @@
+        List.flatten [
+          (
+            List.map2
+              (fun num constr_decl ->
+                let loc = constr_decl.pcd_loc in
+                let (_, _, pattern_arguments, constructor_arguments) = constr_decl_to_pieces constr_decl in
+                case
+                  ~lhs: [%pat? `Num_variant ([%p ppat_constant ~loc num], [%p pattern_arguments])]
+                  ~guard: None
+                  ~rhs: (
+                    pexp_construct ~loc (map_location lident constr_decl.pcd_name) constructor_arguments
+                  )
+              )
+              nums
+              constr_decls
+          );
+          [catchall ~loc (mangle_type_decl dir type_decl)];
+        ]
+
+  let ptype_record_to_serialiser ~loc ~dir type_decl lab_decls =
     match dir with
     | To_biniou ->
       pexp_fun ~loc Nolabel None (pvar ~loc "x") @@
@@ -297,8 +364,8 @@ module Type_decl_to_serialiser : sig
               | Some core_type -> core_type_to_serialiser ~dir core_type
             )
           | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
-          | Ptype_variant _constr_decls -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support variant types"
-          | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
+          | Ptype_variant constr_decls -> ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls
+          | Ptype_record lab_decls -> ptype_record_to_serialiser ~loc ~dir type_decl lab_decls
       )
       (type_decl_to_serialiser_type ~dir type_decl)
 end
