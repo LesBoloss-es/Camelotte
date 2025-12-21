@@ -31,6 +31,19 @@ let mangle_lid ?exn dir lid =
 let mangle_type_decl ?exn dir td =
   Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string ?exn dir)) td
 
+type options = {
+  alias: bool;
+}
+
+let parse_options (options : (string * expression) list) : options =
+  let alias =
+    match List.assoc_opt "alias" options with
+    | None | Some[%expr true] -> true
+    | Some[%expr false] -> false
+    | Some expr -> Location.raise_errorf ~loc: expr.pexp_loc "The `alias` option only supports boolean values."
+  in
+    {alias}
+
 module Core_type_to_serialiser : sig
     (** Given a core_type, return a Parsetree expression that is a function
         converting to or from biniou, depending on the direction argument. *)
@@ -167,50 +180,45 @@ module Type_decl_to_serialiser : sig
 end
 include Type_decl_to_serialiser
 
-let type_decl_str
-    ~(options : (string * expression) list)
-    ~(path : string list)
-    (type_decls : type_declaration list)
-    : structure
-  =
-  ignore path;
+let type_decls_to_serialiser_str ~dir type_decls : structure =
   (* FIXME: loc *)
-  List.concat_map
-    (fun dir ->
-      pstr_value_list ~loc: Location.none Nonrecursive (
-        List.map
-          (fun type_decl ->
-            let loc = type_decl.ptype_loc in
-            value_binding
-              ~loc
-              ~pat: (ppat_var ~loc {txt = mangle_type_decl dir type_decl; loc})
-              ~expr: (type_decl_to_serialiser ~dir type_decl)
-          )
-          type_decls
+  pstr_value_list ~loc: Location.none Nonrecursive (
+    List.map
+      (fun type_decl ->
+        let loc = type_decl.ptype_loc in
+        value_binding
+          ~loc
+          ~pat: (ppat_var ~loc {txt = mangle_type_decl dir type_decl; loc})
+          ~expr: (type_decl_to_serialiser ~dir type_decl)
       )
-    )
-    [To_biniou; Of_biniou] @ (
-    match List.assoc_opt "alias" options with
-    | None | Some[%expr true] ->
-      List.map
-        (fun type_decl ->
-          let loc = type_decl.ptype_loc in
-          pstr_value ~loc Nonrecursive [
-            value_binding
-              ~loc
-              ~pat: (ppat_var ~loc {txt = mangle_type_decl ~exn: false Of_biniou type_decl; loc})
-              ~expr: [%expr fun x ->
-                try
-                  Ok ([%e pexp_ident ~loc {txt = Lident (mangle_type_decl ~exn: true Of_biniou type_decl); loc}] x)
-                with
-                  | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-                    Error (where, what)
-              ]
-          ]
-        )
-        type_decls
-    | Some[%expr false] -> []
-    | Some expr -> Location.raise_errorf ~loc: expr.pexp_loc "The `alias` option only supports boolean values."
+      type_decls
   )
+
+let type_decls_to_aliases_str ~options type_decls : structure =
+  if options.alias then
+    List.map
+      (fun type_decl ->
+        let loc = type_decl.ptype_loc in
+        pstr_value ~loc Nonrecursive [
+          value_binding
+            ~loc
+            ~pat: (ppat_var ~loc {txt = mangle_type_decl ~exn: false Of_biniou type_decl; loc})
+            ~expr: [%expr fun x ->
+              try
+                Ok ([%e pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))] x)
+              with
+                | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+                  Error (where, what)
+            ]
+        ]
+      )
+      type_decls
+  else []
+
+let type_decl_str ~options ~path (type_decls : type_declaration list) : structure =
+  ignore path;
+  let options = parse_options options in
+  List.concat_map (fun dir -> type_decls_to_serialiser_str ~dir type_decls) [To_biniou; Of_biniou] @
+    type_decls_to_aliases_str ~options type_decls
 
 let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ()))
