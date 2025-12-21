@@ -352,24 +352,22 @@ module Type_decl_to_serialiser : sig
           None @@
           Pfunction_body expr
     in
-    pexp_constraint
-      ~loc
-      (
-        grab_fun_params @@
-          match type_decl.ptype_kind with
-          | Ptype_abstract ->
-            (
-              match type_decl.ptype_manifest with
-              | None -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support abstract types without manifest"
-              | Some core_type -> core_type_to_serialiser ~dir core_type
-            )
-          | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
-          | Ptype_variant constr_decls -> ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls
-          | Ptype_record lab_decls -> ptype_record_to_serialiser ~loc ~dir type_decl lab_decls
-      )
-      (type_decl_to_serialiser_type ~dir type_decl)
+    grab_fun_params @@
+      match type_decl.ptype_kind with
+      | Ptype_abstract ->
+        (
+          match type_decl.ptype_manifest with
+          | None -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support abstract types without manifest"
+          | Some core_type -> core_type_to_serialiser ~dir core_type
+        )
+      | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
+      | Ptype_variant constr_decls -> ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls
+      | Ptype_record lab_decls -> ptype_record_to_serialiser ~loc ~dir type_decl lab_decls
 end
 include Type_decl_to_serialiser
+
+let value_binding_with_constraint ~loc ~pat ~expr ~constraint_ =
+  {(value_binding ~loc ~pat ~expr) with pvb_constraint = Some (Pvc_constraint {typ = constraint_; locally_abstract_univars = []})}
 
 let type_decls_to_serialiser_str ~dir type_decls : structure =
   (* FIXME: loc *)
@@ -377,10 +375,11 @@ let type_decls_to_serialiser_str ~dir type_decls : structure =
     List.map
       (fun type_decl ->
         let loc = type_decl.ptype_loc in
-        value_binding
+        value_binding_with_constraint
           ~loc
           ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc dir type_decl)
           ~expr: (type_decl_to_serialiser ~dir type_decl)
+          ~constraint_: (type_decl_to_serialiser_type ~dir type_decl)
       )
       type_decls
   )
@@ -391,7 +390,7 @@ let type_decls_to_aliases_str ~options type_decls : structure =
       (fun type_decl ->
         let loc = type_decl.ptype_loc in
         pstr_value ~loc Nonrecursive [
-          value_binding
+          value_binding_with_constraint
             ~loc
             ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc ~exn: false Of_biniou type_decl)
             ~expr: [%expr fun x ->
@@ -400,6 +399,7 @@ let type_decls_to_aliases_str ~options type_decls : structure =
               with
                 | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) -> Error (where, what)
             ]
+            ~constraint_: (type_decl_to_serialiser_type ~dir: Of_biniou ~exn: false type_decl)
         ]
       )
       type_decls

@@ -38,15 +38,16 @@ Alias
   >   type t = string [@@deriving biniou]
   > EOF
   type t = string[@@deriving biniou]
-  let to_biniou =
-    (Ppx_deriving_biniou_runtime.string_to_biniou : t -> Bi_io.tree)
-  let of_biniou_exn =
-    (Ppx_deriving_biniou_runtime.string_of_biniou_exn : Bi_io.tree -> t)
-  let of_biniou x =
-    try Ok (of_biniou_exn x)
-    with
-    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-        Error (where, what)
+  let to_biniou : t -> Bi_io.tree =
+    Ppx_deriving_biniou_runtime.string_to_biniou
+  let of_biniou_exn : Bi_io.tree -> t =
+    Ppx_deriving_biniou_runtime.string_of_biniou_exn
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    fun x ->
+      try Ok (of_biniou_exn x)
+      with
+      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+          Error (where, what)
 
 Record
 ------
@@ -61,38 +62,37 @@ Record
   type t = {
     foo: int ;
     bar: float list }[@@deriving biniou]
-  let to_biniou =
-    (fun x ->
-       `Record
-         [|((Some "foo"), (Bi_io.hash_name "foo"),
-             (Ppx_deriving_biniou_runtime.int_to_biniou x.foo));((Some "bar"),
-                                                                  (Bi_io.hash_name
-                                                                     "bar"),
-                                                                  (Ppx_deriving_biniou_runtime.list_to_biniou
-                                                                     Ppx_deriving_biniou_runtime.float_to_biniou
-                                                                     x.bar))|] : 
-    t -> Bi_io.tree)
-  let of_biniou_exn =
-    (function
-     | `Record r ->
-         {
-           foo =
-             (Ppx_deriving_biniou_runtime.int_of_biniou_exn
-                (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
-                   "foo" r));
-           bar =
-             (Ppx_deriving_biniou_runtime.list_of_biniou_exn
-                Ppx_deriving_biniou_runtime.float_of_biniou_exn
-                (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
-                   "bar" r))
-         }
-     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t : 
-    Bi_io.tree -> t)
-  let of_biniou x =
-    try Ok (of_biniou_exn x)
-    with
-    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-        Error (where, what)
+  let to_biniou : t -> Bi_io.tree =
+    fun x ->
+      `Record
+        [|((Some "foo"), (Bi_io.hash_name "foo"),
+            (Ppx_deriving_biniou_runtime.int_to_biniou x.foo));((Some "bar"),
+                                                                 (Bi_io.hash_name
+                                                                    "bar"),
+                                                                 (Ppx_deriving_biniou_runtime.list_to_biniou
+                                                                    Ppx_deriving_biniou_runtime.float_to_biniou
+                                                                    x.bar))|]
+  let of_biniou_exn : Bi_io.tree -> t =
+    function
+    | `Record r ->
+        {
+          foo =
+            (Ppx_deriving_biniou_runtime.int_of_biniou_exn
+               (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                  "foo" r));
+          bar =
+            (Ppx_deriving_biniou_runtime.list_of_biniou_exn
+               Ppx_deriving_biniou_runtime.float_of_biniou_exn
+               (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                  "bar" r))
+        }
+    | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    fun x ->
+      try Ok (of_biniou_exn x)
+      with
+      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+          Error (where, what)
 
 Variant
 -------
@@ -102,26 +102,25 @@ Variant
   > EOF
   type t =
     | Foo of int * float [@@deriving biniou]
-  let to_biniou =
-    (function
-     | Foo (arg0, arg1) ->
-         `Num_variant
-           (0,
-             (Some
-                (`Tuple
-                   [|(Ppx_deriving_biniou_runtime.int_to_biniou arg0);(
-                     Ppx_deriving_biniou_runtime.float_to_biniou arg1)|]))) : 
-    t -> Bi_io.tree)
-  let of_biniou_exn =
-    (function
-     | `Num_variant (0, Some (`Tuple [|arg0;arg1|])) ->
-         Foo
-           ((Ppx_deriving_biniou_runtime.int_of_biniou_exn arg0),
-             (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
-     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t : 
-    Bi_io.tree -> t)
-  let of_biniou x =
-    try Ok (of_biniou_exn x)
-    with
-    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-        Error (where, what)
+  let to_biniou : t -> Bi_io.tree =
+    function
+    | Foo (arg0, arg1) ->
+        `Num_variant
+          (0,
+            (Some
+               (`Tuple
+                  [|(Ppx_deriving_biniou_runtime.int_to_biniou arg0);(Ppx_deriving_biniou_runtime.float_to_biniou
+                                                                      arg1)|])))
+  let of_biniou_exn : Bi_io.tree -> t =
+    function
+    | `Num_variant (0, Some (`Tuple [|arg0;arg1|])) ->
+        Foo
+          ((Ppx_deriving_biniou_runtime.int_of_biniou_exn arg0),
+            (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
+    | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    fun x ->
+      try Ok (of_biniou_exn x)
+      with
+      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+          Error (where, what)
