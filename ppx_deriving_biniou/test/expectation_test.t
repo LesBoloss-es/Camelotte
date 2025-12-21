@@ -43,11 +43,7 @@ Alias
   let of_biniou_exn : Bi_io.tree -> t =
     Ppx_deriving_biniou_runtime.string_of_biniou_exn
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
-    fun x ->
-      try Ok (of_biniou_exn x)
-      with
-      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-          Error (where, what)
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
 
 Alias with argument
 -------------------
@@ -67,11 +63,8 @@ Alias with argument
       Bi_io.tree -> ('a t, (string * Bi_io.tree)) Stdlib.Result.t
     =
     fun _tvar_a_of_biniou_exn ->
-      fun x ->
-        try Ok ((of_biniou_exn _tvar_a_of_biniou_exn) x)
-        with
-        | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-            Error (where, what)
+      Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn
+        (of_biniou_exn _tvar_a_of_biniou_exn)
 
 Record
 ------
@@ -112,11 +105,7 @@ Record
         }
     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
-    fun x ->
-      try Ok (of_biniou_exn x)
-      with
-      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-          Error (where, what)
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
 
 Variant
 -------
@@ -143,8 +132,4 @@ Variant
             (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
-    fun x ->
-      try Ok (of_biniou_exn x)
-      with
-      | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-          Error (where, what)
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn

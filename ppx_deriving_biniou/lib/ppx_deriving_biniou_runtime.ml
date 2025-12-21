@@ -55,6 +55,14 @@ let array_of_biniou_exn (a_of_biniou : tree -> 'a) : tree -> 'a array = function
 let list_to_biniou (a_to_biniou : 'a -> tree) : 'a list -> tree = fun l -> `Tuple (Array.of_list (List.map a_to_biniou l))
 let list_of_biniou_exn (a_of_biniou : tree -> 'a) : tree -> 'a list = function `Tuple a -> List.map a_of_biniou (Array.to_list a) | t -> could_not_convert "list_of_biniou" t
 
+(** Helper to make a pure [of_biniou] function based on an exception-raising
+    [of_biniou_exn] function. *)
+let of_biniou_of_of_biniou_exn (of_biniou_exn : tree -> 'a) : tree -> ('a, (string * tree)) result = fun x ->
+  try
+    Ok (of_biniou_exn x)
+  with
+    | Could_not_convert (where, what) -> Error (where, what)
+
 (** Given the content of a Biniou record, look for the tree corresponding to the
     given string by comparing it to the hashes. If it isn't found, the name
     argument is used to raise {!Could_not_convert}. *)

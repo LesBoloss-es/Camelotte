@@ -419,16 +419,10 @@ let type_decls_to_aliases_str ~options type_decls : structure =
             ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc ~exn: false Of_biniou type_decl)
             ~expr: (
               type_decl_add_fun_params ~dir: Of_biniou type_decl @@
-                [%expr fun x ->
-                  try
-                    Ok (
-                      [%e type_decl_apply_fun_params ~dir: Of_biniou type_decl @@
-                          pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))
-                      ]
-                        x
-                    )
-                  with
-                    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) -> Error (where, what)
+                [%expr Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn
+                    [%e type_decl_apply_fun_params ~dir: Of_biniou type_decl @@
+                        pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))
+                    ]
                 ]
             )
             ~constraint_: (type_decl_to_serialiser_type ~dir: Of_biniou ~exn: false type_decl)
