@@ -173,7 +173,6 @@ let type_decl_str
     (type_decls : type_declaration list)
     : structure
   =
-  ignore options;
   ignore path;
   (* FIXME: loc *)
   List.concat_map
@@ -190,6 +189,28 @@ let type_decl_str
           type_decls
       )
     )
-    [To_biniou; Of_biniou]
+    [To_biniou; Of_biniou] @ (
+    match List.assoc_opt "alias" options with
+    | None | Some[%expr true] ->
+      List.map
+        (fun type_decl ->
+          let loc = type_decl.ptype_loc in
+          pstr_value ~loc Nonrecursive [
+            value_binding
+              ~loc
+              ~pat: (ppat_var ~loc {txt = mangle_type_decl ~exn: false Of_biniou type_decl; loc})
+              ~expr: [%expr fun x ->
+                try
+                  Ok ([%e pexp_ident ~loc {txt = Lident (mangle_type_decl ~exn: true Of_biniou type_decl); loc}] x)
+                with
+                  | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+                    Error (where, what)
+              ]
+          ]
+        )
+        type_decls
+    | Some[%expr false] -> []
+    | Some expr -> Location.raise_errorf ~loc: expr.pexp_loc "The `alias` option only supports boolean values."
+  )
 
 let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ()))

@@ -5,7 +5,7 @@ module Basic = struct
     qux: int32 list;
     quux: int64 array;
   }
-  [@@deriving ord, show {with_path = false}, biniou, qcheck]
+  [@@deriving ord, show {with_path = false}, biniou {alias = false}, qcheck]
 end
 
 (** Biniou trees can contain optional information. This function erases it. It
