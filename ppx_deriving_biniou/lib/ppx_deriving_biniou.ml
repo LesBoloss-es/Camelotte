@@ -33,11 +33,25 @@ let direction_to_string ?(exn = true) dir =
 let mangle_lid ?exn dir lid =
   Ppx_deriving.mangle_lid (`Suffix (direction_to_string ?exn dir)) lid
 
+let mangle_lid' ~loc ?exn dir lid =
+  {txt = mangle_lid ?exn dir lid; loc}
+
 let mangle_type_decl ?exn dir td =
   Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string ?exn dir)) td
 
 let mangle_type_decl' ~loc ?exn dir td =
   {txt = mangle_type_decl ?exn dir td; loc}
+
+(** Given a type variable, produce the name of its serialiser. *)
+(* FIXME: It would be cleaner to carry a quoter around to ensure that the
+   variables we are using for type variables are fresh. For now, we will rely on
+   something deterministically derived from the variable name. *)
+let mangle_type_var ~dir var =
+  match mangle_lid dir (lident @@ "_tvar_" ^ var) with
+  | Lident s -> s
+  | _ -> assert false
+
+let mangle_type_var' ~loc ~dir var = {txt = mangle_type_var ~dir var; loc}
 
 type options = {
   alias: bool;
@@ -52,13 +66,56 @@ let parse_options (options : (string * expression) list) : options =
   in
     {alias}
 
+let core_type_to_serialiser_type ~dir core_type : core_type =
+  ignore dir;
+  let loc = core_type.ptyp_loc in
+  match core_type.ptyp_desc with
+  | Ptyp_any -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_any in core_type_to_serialiser_type"
+  | Ptyp_var _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_var in core_type_to_serialiser_type"
+  | Ptyp_arrow _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_arrow in core_type_to_serialiser_type"
+  | Ptyp_tuple _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_tuple in core_type_to_serialiser_type"
+  | Ptyp_constr _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_constr in core_type_to_serialiser_type"
+  | Ptyp_object _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_object in core_type_to_serialiser_type"
+  | Ptyp_class _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_class in core_type_to_serialiser_type"
+  | Ptyp_alias _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_alias in core_type_to_serialiser_type"
+  | Ptyp_variant _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_variant in core_type_to_serialiser_type"
+  | Ptyp_poly _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_poly in core_type_to_serialiser_type"
+  | Ptyp_package _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_package in core_type_to_serialiser_type"
+  | Ptyp_open _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_open in core_type_to_serialiser_type"
+  | Ptyp_extension _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_extension in core_type_to_serialiser_type"
+
 let type_decl_to_serialiser_type ~dir ?(exn = true) type_decl : core_type =
   let loc = type_decl.ptype_loc in
   let name = map_location lident type_decl.ptype_name in
-  match dir, exn with
-  | To_biniou, _ -> [%type: [%t ptyp_constr ~loc name []] -> Bi_io.tree]
-  | Of_biniou, true -> [%type: Bi_io.tree -> [%t ptyp_constr ~loc name []]]
-  | Of_biniou, false -> [%type: Bi_io.tree -> ([%t ptyp_constr ~loc name []], (string * Bi_io.tree)) Stdlib.Result.t]
+  let params = List.map fst type_decl.ptype_params in
+  let grab_fun_params type_ =
+    (* Given an type, wrap it in an arrow (type) that grabs the serialising arguments. *)
+    List.fold_right
+      (fun param type_ ->
+        let loc = param.ptyp_loc in
+        ptyp_arrow
+          ~loc
+          Nolabel
+          (
+            match param with
+            | {ptyp_desc = Ptyp_var var; _} ->
+              (
+                match dir with
+                | To_biniou -> [%type: [%t ptyp_var ~loc var] -> Bi_io.tree]
+                | Of_biniou -> [%type: Bi_io.tree -> [%t ptyp_var ~loc var]]
+              )
+            | _ -> assert false
+          )
+          type_
+      )
+      params
+      type_
+  in
+  grab_fun_params @@
+    match dir, exn with
+    | To_biniou, _ -> [%type: [%t ptyp_constr ~loc name params] -> Bi_io.tree]
+    | Of_biniou, true -> [%type: Bi_io.tree -> [%t ptyp_constr ~loc name params]]
+    | Of_biniou, false -> [%type: Bi_io.tree -> ([%t ptyp_constr ~loc name params], (string * Bi_io.tree)) Stdlib.Result.t]
 
 (** For pattern matching, provide a catch-all that raises
     {!Ppx_deriving_biniou_runtime.Could_not_convert}. *)
@@ -86,7 +143,7 @@ module Core_type_to_serialiser : sig
     let loc = core_type.ptyp_loc in
     match core_type.ptyp_desc with
     | Ptyp_any -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_any"
-    | Ptyp_var _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_var"
+    | Ptyp_var var -> ptyp_var_to_serialiser ~loc ~dir var
     | Ptyp_arrow _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_arrow"
     | Ptyp_tuple core_types -> ptyp_tuple_to_serialiser ~loc ~dir core_types
     | Ptyp_object _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_object"
@@ -98,6 +155,9 @@ module Core_type_to_serialiser : sig
     | Ptyp_open _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_open"
     | Ptyp_extension _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_extension"
     | Ptyp_constr (ty, args) -> ptyp_constr_to_serialiser ~loc ~dir ty args
+
+  and ptyp_var_to_serialiser ~loc ~dir var =
+    pexp_ident ~loc @@ map_location lident @@ mangle_type_var' ~loc ~dir var
 
   and ptyp_tuple_to_serialiser ~loc ~dir core_types =
     let vars = List.mapi (fun i _ -> ("x" ^ string_of_int i)) core_types in
@@ -203,19 +263,42 @@ module Type_decl_to_serialiser : sig
 
   let type_decl_to_serialiser ~dir type_decl =
     let loc = type_decl.ptype_loc in
+    let grab_fun_params expr =
+      (* Given an expression, wrap it in a function (expression) that grabs the
+         [_tvar_a_<dir>_biniou] arguments, if needed. *)
+      match type_decl.ptype_params with
+      | [] -> expr
+      | params ->
+        pexp_function
+          ~loc
+          (
+            List.map
+              (fun (param, _) ->
+                let loc = param.ptyp_loc in
+                match param with
+                | {ptyp_desc = Ptyp_var var; _} ->
+                  pparam_val ~loc Nolabel None (pvar ~loc @@ mangle_type_var ~dir var)
+                | _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou: unexpected type parameter that is not Ptyp_var"
+              )
+              params
+          )
+          None @@
+          Pfunction_body expr
+    in
     pexp_constraint
       ~loc
       (
-        match type_decl.ptype_kind with
-        | Ptype_abstract ->
-          (
-            match type_decl.ptype_manifest with
-            | None -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support abstract types without manifest"
-            | Some core_type -> core_type_to_serialiser ~dir core_type
-          )
-        | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
-        | Ptype_variant _constr_decls -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support variant types"
-        | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
+        grab_fun_params @@
+          match type_decl.ptype_kind with
+          | Ptype_abstract ->
+            (
+              match type_decl.ptype_manifest with
+              | None -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support abstract types without manifest"
+              | Some core_type -> core_type_to_serialiser ~dir core_type
+            )
+          | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
+          | Ptype_variant _constr_decls -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support variant types"
+          | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
       )
       (type_decl_to_serialiser_type ~dir type_decl)
 end
@@ -229,7 +312,7 @@ let type_decls_to_serialiser_str ~dir type_decls : structure =
         let loc = type_decl.ptype_loc in
         value_binding
           ~loc
-          ~pat: (ppat_var ~loc {txt = mangle_type_decl dir type_decl; loc})
+          ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc dir type_decl)
           ~expr: (type_decl_to_serialiser ~dir type_decl)
       )
       type_decls
@@ -243,13 +326,12 @@ let type_decls_to_aliases_str ~options type_decls : structure =
         pstr_value ~loc Nonrecursive [
           value_binding
             ~loc
-            ~pat: (ppat_var ~loc {txt = mangle_type_decl ~exn: false Of_biniou type_decl; loc})
+            ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc ~exn: false Of_biniou type_decl)
             ~expr: [%expr fun x ->
               try
                 Ok ([%e pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))] x)
               with
-                | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
-                  Error (where, what)
+                | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) -> Error (where, what)
             ]
         ]
       )
@@ -257,7 +339,11 @@ let type_decls_to_aliases_str ~options type_decls : structure =
   else []
 
 let type_decl_to_serialiser_vd ~loc ~dir ?(exn = true) type_decl : value_description =
-  value_description ~loc ~name: (mangle_type_decl' ~loc dir ~exn type_decl) ~type_: (type_decl_to_serialiser_type ~dir ~exn type_decl) ~prim: []
+  value_description
+    ~loc
+    ~name: (mangle_type_decl' ~loc dir ~exn type_decl)
+    ~type_: (type_decl_to_serialiser_type ~dir ~exn type_decl)
+    ~prim: []
 
 let type_decl_to_serialiser_vds ~options ~loc type_decl : value_description list =
   [type_decl_to_serialiser_vd ~loc ~dir: To_biniou type_decl;
