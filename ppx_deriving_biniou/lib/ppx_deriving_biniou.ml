@@ -66,6 +66,11 @@ let parse_options (options : (string * expression) list) : options =
   in
     {alias}
 
+(** An attribute that suppresses warning 32, “unused-value-declaration”. *)
+let attr_suppress_warning_32 ~loc =
+  let name = {txt = "ocaml.warning"; loc} in
+  Ast_helper.Attr.mk ~loc name (PStr [%str "-32"])
+
 (** An attribute that suppresses warning 39, “unused-rec-flag”. *)
 let attr_suppress_warning_39 ~loc =
   let name = {txt = "ocaml.warning"; loc} in
@@ -440,7 +445,7 @@ let type_decls_to_aliases_str ~options type_decls : structure =
                 ]
             )
             ~constraint_: (type_decl_to_serialiser_type ~dir: Of_biniou ~exn: false type_decl)
-            ~attributes: []
+            ~attributes: [attr_suppress_warning_32 ~loc]
         ]
       )
       type_decls

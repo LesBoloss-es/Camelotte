@@ -8,11 +8,11 @@ module Basic = struct
     qux: int32 list;
     quux: int64 array;
   }
-  [@@deriving ord, show {with_path = false}, biniou {alias = false}, qcheck]
+  [@@deriving ord, show {with_path = false}, biniou, qcheck]
 end
 
 module Alias = struct
-  type t = (string * float) option [@@deriving ord, show, biniou {alias = false}, qcheck]
+  type t = (string * float) option [@@deriving ord, show, biniou, qcheck]
 end
 
 module Variant = struct
@@ -20,7 +20,7 @@ module Variant = struct
     | Foo of int
     | Bar of string list
     | Baz of float * int32 array
-  [@@deriving ord, show, biniou {alias = false}, qcheck]
+  [@@deriving ord, show, biniou, qcheck]
 end
 
 module TypeArguments = struct
@@ -28,9 +28,9 @@ module TypeArguments = struct
      = ('a * a * 'b)], by renaming [type c] to [type a], but ppx_deriving_qcheck
      does not handle this situation cleanly. See
      https://github.com/c-cube/qcheck/issues/399 *)
-  type c = int [@@deriving ord, show, biniou {alias = false}, qcheck]
-  type ('a, 'b) s = 'a * c * 'b [@@deriving ord, show, biniou {alias = false}, qcheck]
-  type t = (float, string) s [@@deriving ord, show, biniou {alias = false}, qcheck]
+  type c = int [@@deriving ord, show, biniou, qcheck]
+  type ('a, 'b) s = 'a * c * 'b [@@deriving ord, show, biniou, qcheck]
+  type t = (float, string) s [@@deriving ord, show, biniou, qcheck]
 end
 
 (** Biniou trees can contain optional information. This function erases it. It

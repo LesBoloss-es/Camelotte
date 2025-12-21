@@ -44,6 +44,7 @@ Alias
     Ppx_deriving_biniou_runtime.string_of_biniou_exn[@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
 
 Alias with argument
 -------------------
@@ -66,7 +67,7 @@ Alias with argument
     =
     fun _tvar_a_of_biniou_exn ->
       Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn
-        (of_biniou_exn _tvar_a_of_biniou_exn)
+        (of_biniou_exn _tvar_a_of_biniou_exn)[@@ocaml.warning "-32"]
 
 Record
 ------
@@ -110,6 +111,7 @@ Record
     [@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
 
 Variant
 -------
@@ -139,6 +141,7 @@ Variant
     [@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
 
 Recursive
 ---------
@@ -177,4 +180,4 @@ Recursive
     =
     fun _tvar_a_of_biniou_exn ->
       Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn
-        (of_biniou_exn _tvar_a_of_biniou_exn)
+        (of_biniou_exn _tvar_a_of_biniou_exn)[@@ocaml.warning "-32"]
