@@ -2,6 +2,11 @@ open Ppxlib
 open Ast_builder.Default
 
 let some x = Some x
+
+let map_location f {txt; loc} = {txt = f txt; loc}
+
+let lident x = Lident x
+
 let longident ~loc s = {txt = Longident.parse s; loc}
 
 let map_longident f = function
@@ -31,6 +36,9 @@ let mangle_lid ?exn dir lid =
 let mangle_type_decl ?exn dir td =
   Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string ?exn dir)) td
 
+let mangle_type_decl' ~loc ?exn dir td =
+  {txt = mangle_type_decl ?exn dir td; loc}
+
 type options = {
   alias: bool;
 }
@@ -43,6 +51,14 @@ let parse_options (options : (string * expression) list) : options =
     | Some expr -> Location.raise_errorf ~loc: expr.pexp_loc "The `alias` option only supports boolean values."
   in
     {alias}
+
+let type_decl_to_serialiser_type ~dir ?(exn = true) type_decl : core_type =
+  let loc = type_decl.ptype_loc in
+  let name = map_location lident type_decl.ptype_name in
+  match dir, exn with
+  | To_biniou, _ -> [%type: [%t ptyp_constr ~loc name []] -> Bi_io.tree]
+  | Of_biniou, true -> [%type: Bi_io.tree -> [%t ptyp_constr ~loc name []]]
+  | Of_biniou, false -> [%type: Bi_io.tree -> ([%t ptyp_constr ~loc name []], (string * Bi_io.tree)) Stdlib.Result.t]
 
 module Core_type_to_serialiser : sig
     (** Given a core_type, return a Parsetree expression that is a function
@@ -174,9 +190,14 @@ module Type_decl_to_serialiser : sig
 
   let type_decl_to_serialiser ~dir type_decl =
     let loc = type_decl.ptype_loc in
-    match type_decl.ptype_kind with
-    | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
-    | _ -> Location.raise_errorf ~loc "type_decl"
+    pexp_constraint
+      ~loc
+      (
+        match type_decl.ptype_kind with
+        | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
+        | _ -> Location.raise_errorf ~loc "type_decl"
+      )
+      (type_decl_to_serialiser_type ~dir type_decl)
 end
 include Type_decl_to_serialiser
 
@@ -215,10 +236,29 @@ let type_decls_to_aliases_str ~options type_decls : structure =
       type_decls
   else []
 
+let type_decl_to_serialiser_vd ~loc ~dir ?(exn = true) type_decl : value_description =
+  value_description ~loc ~name: (mangle_type_decl' ~loc dir ~exn type_decl) ~type_: (type_decl_to_serialiser_type ~dir ~exn type_decl) ~prim: []
+
+let type_decl_to_serialiser_vds ~options ~loc type_decl : value_description list =
+  [type_decl_to_serialiser_vd ~loc ~dir: To_biniou type_decl;
+  type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: true type_decl;
+  ] @
+    (if options.alias then [type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: false type_decl] else [])
+
 let type_decl_str ~options ~path (type_decls : type_declaration list) : structure =
   ignore path;
   let options = parse_options options in
   List.concat_map (fun dir -> type_decls_to_serialiser_str ~dir type_decls) [To_biniou; Of_biniou] @
     type_decls_to_aliases_str ~options type_decls
 
-let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ()))
+let type_decl_sig ~options ~path (type_decls : type_declaration list) : signature =
+  ignore path;
+  let options = parse_options options in
+  List.concat_map
+    (fun type_decl ->
+      let loc = type_decl.ptype_loc in
+      List.map (psig_value ~loc) (type_decl_to_serialiser_vds ~options ~loc type_decl)
+    )
+    type_decls
+
+let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ~type_decl_sig ()))

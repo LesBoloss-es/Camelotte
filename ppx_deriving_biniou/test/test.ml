@@ -68,9 +68,7 @@ let roundtrip_test_case ?gen ?show ?arbitrary ~compare ~to_biniou ~of_biniou nam
   true
 
 module type Roundtrip_test_caseable = sig
-  type t [@@deriving ord, show]
-  val to_biniou : t -> Bi_io.tree
-  val of_biniou_exn : Bi_io.tree -> t
+  type t [@@deriving ord, show, biniou {alias = false}]
   val gen : t QCheck.Gen.t
 end
 
