@@ -224,6 +224,40 @@ Variant with record
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
     [@@ocaml.warning "-32"]
 
+Variant 2
+---------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = [\`Foo of int * float] [@@deriving biniou]
+  > EOF
+  type t = [ `Foo of (int * float) ][@@deriving biniou]
+  let rec to_biniou : t -> Bi_io.tree =
+    function
+    | `Foo arg ->
+        `Variant
+          ((Some "Foo"), (Bi_io.hash_name "Foo"),
+            (Some
+               (((fun (x0, x1) ->
+                    `Tuple
+                      [|(Ppx_deriving_biniou_runtime.int_to_biniou x0);(
+                        Ppx_deriving_biniou_runtime.float_to_biniou x1)|])) arg)))
+    [@@ocaml.warning "-39"]
+  let rec of_biniou_exn : Bi_io.tree -> t =
+    function
+    | `Variant (_, hash, Some arg) when hash = (Bi_io.hash_name "Foo") ->
+        `Foo
+          (((function
+             | `Tuple [|x0;x1|] ->
+                 ((Ppx_deriving_biniou_runtime.int_of_biniou_exn x0),
+                   (Ppx_deriving_biniou_runtime.float_of_biniou_exn x1))
+             | t -> Ppx_deriving_biniou_runtime.could_not_convert "FIXME" t))
+             arg)
+    | t -> Ppx_deriving_biniou_runtime.could_not_convert "fixme" t[@@ocaml.warning
+                                                                    "-39"]
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
+
 Recursive
 ---------
 

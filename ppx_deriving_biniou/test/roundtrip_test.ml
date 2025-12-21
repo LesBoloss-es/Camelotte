@@ -24,7 +24,16 @@ module Variant = struct
   [@@deriving ord, show, biniou, qcheck]
 end
 
-module TypeArguments = struct
+module Variant_2 = struct
+  type t = [
+    | `Foo of int
+    | `Bar of string list
+    | `Baz of float * int32 array
+  ]
+  [@@deriving ord, show, biniou, qcheck]
+end
+
+module Type_arguments = struct
   (* FIXME: I would like to check that there are no clashes it [type ('a, 'b) s
      = ('a * a * 'b)], by renaming [type c] to [type a], but ppx_deriving_qcheck
      does not handle this situation cleanly. See
@@ -114,7 +123,8 @@ let () =
       roundtrip_test_case' "basic" (module Basic);
       roundtrip_test_case' "alias" (module Alias);
       roundtrip_test_case' "variant" (module Variant);
-      roundtrip_test_case' "type arguments" (module TypeArguments);
+      roundtrip_test_case' "variant 2" (module Variant_2);
+      roundtrip_test_case' "type arguments" (module Type_arguments);
       ]
     )
   ]

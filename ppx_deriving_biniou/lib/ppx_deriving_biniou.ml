@@ -159,7 +159,7 @@ module Core_type_to_serialiser : sig
     | Ptyp_object _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_object"
     | Ptyp_class _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_class"
     | Ptyp_alias _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_alias"
-    | Ptyp_variant _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_variant"
+    | Ptyp_variant (row_fields, closed_flag, labels) -> ptyp_variant_to_serialiser ~loc ~dir row_fields closed_flag labels
     | Ptyp_poly _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_poly"
     | Ptyp_package _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_package"
     | Ptyp_open _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_open"
@@ -180,6 +180,76 @@ module Core_type_to_serialiser : sig
         case ~lhs: (ppat_variant ~loc "Tuple" @@ some @@ ppat_array ~loc var_patterns) ~guard: None ~rhs: (pexp_tuple ~loc var_serialised);
         catchall ~loc "FIXME";
       ]
+
+  and ptyp_variant_to_serialiser ~loc ~dir row_fields _closed_flag labels =
+    (match labels with None | Some [] -> () | Some _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support variants with labels");
+    let row_field_to_pieces bool types =
+      (* Given a constructor declaration, produce: the pattern and expression
+         for To_biniou, and the pattern and expression for Of_biniou. *)
+      match bool, types with
+      | true, [] ->
+        (
+          None,
+          [%expr None],
+          [%pat? None],
+          None
+        )
+      | false, [arg] ->
+        (
+          Some [%pat? arg],
+          [%expr Some ([%e core_type_to_serialiser ~dir arg] arg)],
+          [%pat? Some arg],
+          Some [%expr [%e core_type_to_serialiser ~dir arg] arg]
+        )
+      | _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support this form of Rtag"
+    in
+    match dir with
+    | To_biniou ->
+      pexp_function_cases ~loc (
+        List.map
+          (fun row_field ->
+            let loc = row_field.prf_loc in
+            match row_field.prf_desc with
+            | Rtag (name, bool, types) ->
+              let pexp_name = let loc = name.loc in pexp_constant ~loc (Pconst_string (name.txt, loc, None)) in
+              let (pattern_arguments, constructor_arguments, _, _) = row_field_to_pieces bool types in
+              case
+                ~lhs: (ppat_variant ~loc name.txt pattern_arguments)
+                ~guard: None
+                ~rhs: (
+                  pexp_variant ~loc "Variant" @@
+                  some @@
+                  pexp_tuple ~loc [
+                    pexp_construct ~loc (longident ~loc "Some") (Some pexp_name);
+                    pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
+                    constructor_arguments;
+                  ]
+                )
+            | Rinherit _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Rinherit"
+          )
+          row_fields
+      )
+    | Of_biniou ->
+      pexp_function_cases ~loc @@
+        List.flatten [
+          (
+            List.map
+              (fun row_field ->
+                let loc = row_field.prf_loc in
+                match row_field.prf_desc with
+                | Rtag (name, bool, types) ->
+                  let pexp_name = let loc = name.loc in pexp_constant ~loc (Pconst_string (name.txt, loc, None)) in
+                  let (_, _, pattern_arguments, constructor_arguments) = row_field_to_pieces bool types in
+                  case
+                    ~lhs: [%pat? `Variant (_, hash, [%p pattern_arguments])]
+                    ~guard: (Some [%expr hash = Bi_io.hash_name [%e pexp_name]])
+                    ~rhs: (pexp_variant ~loc name.txt constructor_arguments)
+                | Rinherit _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Rinherit"
+              )
+              row_fields
+          );
+          [catchall ~loc "fixme"];
+        ]
 
   and ptyp_constr_to_serialiser ~loc ~dir ty args =
     let in_runtime_lib =
