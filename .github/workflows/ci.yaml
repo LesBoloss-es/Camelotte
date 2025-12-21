@@ -97,6 +97,7 @@ jobs:
         system:
           - ubuntu-latest
           - macos-latest
+          - windows-latest
     name: OPAM (all, ${{matrix.system}})
     runs-on: ${{matrix.system}}
     steps:
