@@ -38,10 +38,10 @@ Alias
   >   type t = string [@@deriving biniou]
   > EOF
   type t = string[@@deriving biniou]
-  let to_biniou : t -> Bi_io.tree =
-    Ppx_deriving_biniou_runtime.string_to_biniou
-  let of_biniou_exn : Bi_io.tree -> t =
-    Ppx_deriving_biniou_runtime.string_of_biniou_exn
+  let rec to_biniou : t -> Bi_io.tree =
+    Ppx_deriving_biniou_runtime.string_to_biniou[@@ocaml.warning "-39"]
+  let rec of_biniou_exn : Bi_io.tree -> t =
+    Ppx_deriving_biniou_runtime.string_of_biniou_exn[@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
 
@@ -52,12 +52,14 @@ Alias with argument
   >   type 'a t = 'a list [@@deriving biniou]
   > EOF
   type 'a t = 'a list[@@deriving biniou]
-  let to_biniou : ('a -> Bi_io.tree) -> 'a t -> Bi_io.tree =
+  let rec to_biniou : ('a -> Bi_io.tree) -> 'a t -> Bi_io.tree =
     fun _tvar_a_to_biniou ->
-      Ppx_deriving_biniou_runtime.list_to_biniou _tvar_a_to_biniou
-  let of_biniou_exn : (Bi_io.tree -> 'a) -> Bi_io.tree -> 'a t =
+      Ppx_deriving_biniou_runtime.list_to_biniou _tvar_a_to_biniou[@@ocaml.warning
+                                                                    "-39"]
+  let rec of_biniou_exn : (Bi_io.tree -> 'a) -> Bi_io.tree -> 'a t =
     fun _tvar_a_of_biniou_exn ->
       Ppx_deriving_biniou_runtime.list_of_biniou_exn _tvar_a_of_biniou_exn
+    [@@ocaml.warning "-39"]
   let of_biniou :
     (Bi_io.tree -> 'a) ->
       Bi_io.tree -> ('a t, (string * Bi_io.tree)) Stdlib.Result.t
@@ -79,7 +81,7 @@ Record
   type t = {
     foo: int ;
     bar: float list }[@@deriving biniou]
-  let to_biniou : t -> Bi_io.tree =
+  let rec to_biniou : t -> Bi_io.tree =
     fun x ->
       `Record
         [|((Some "foo"), (Bi_io.hash_name "foo"),
@@ -89,7 +91,8 @@ Record
                                                                  (Ppx_deriving_biniou_runtime.list_to_biniou
                                                                     Ppx_deriving_biniou_runtime.float_to_biniou
                                                                     x.bar))|]
-  let of_biniou_exn : Bi_io.tree -> t =
+    [@@ocaml.warning "-39"]
+  let rec of_biniou_exn : Bi_io.tree -> t =
     function
     | `Record r ->
         {
@@ -104,6 +107,7 @@ Record
                   "bar" r))
         }
     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
+    [@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
 
@@ -115,7 +119,7 @@ Variant
   > EOF
   type t =
     | Foo of int * float [@@deriving biniou]
-  let to_biniou : t -> Bi_io.tree =
+  let rec to_biniou : t -> Bi_io.tree =
     function
     | Foo (arg0, arg1) ->
         `Num_variant
@@ -124,12 +128,53 @@ Variant
                (`Tuple
                   [|(Ppx_deriving_biniou_runtime.int_to_biniou arg0);(Ppx_deriving_biniou_runtime.float_to_biniou
                                                                       arg1)|])))
-  let of_biniou_exn : Bi_io.tree -> t =
+    [@@ocaml.warning "-39"]
+  let rec of_biniou_exn : Bi_io.tree -> t =
     function
     | `Num_variant (0, Some (`Tuple [|arg0;arg1|])) ->
         Foo
           ((Ppx_deriving_biniou_runtime.int_of_biniou_exn arg0),
             (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
+    [@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+
+Recursive
+---------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type 'a t = Nil | Cons of 'a * 'a t [@@deriving biniou]
+  > EOF
+  type 'a t =
+    | Nil 
+    | Cons of 'a * 'a t [@@deriving biniou]
+  let rec to_biniou : ('a -> Bi_io.tree) -> 'a t -> Bi_io.tree =
+    fun _tvar_a_to_biniou ->
+      (function
+       | Nil -> `Num_variant (0, None)
+       | Cons (arg0, arg1) ->
+           `Num_variant
+             (1,
+               (Some
+                  (`Tuple
+                     [|(_tvar_a_to_biniou arg0);((to_biniou _tvar_a_to_biniou)
+                                                   arg1)|]))))[@@ocaml.warning
+                                                                "-39"]
+  let rec of_biniou_exn : (Bi_io.tree -> 'a) -> Bi_io.tree -> 'a t =
+    fun _tvar_a_of_biniou_exn ->
+      (function
+       | `Num_variant (0, None) -> Nil
+       | `Num_variant (1, Some (`Tuple [|arg0;arg1|])) ->
+           Cons
+             ((_tvar_a_of_biniou_exn arg0),
+               ((of_biniou_exn _tvar_a_of_biniou_exn) arg1))
+       | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t)
+    [@@ocaml.warning "-39"]
+  let of_biniou :
+    (Bi_io.tree -> 'a) ->
+      Bi_io.tree -> ('a t, (string * Bi_io.tree)) Stdlib.Result.t
+    =
+    fun _tvar_a_of_biniou_exn ->
+      Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn
+        (of_biniou_exn _tvar_a_of_biniou_exn)

@@ -66,6 +66,11 @@ let parse_options (options : (string * expression) list) : options =
   in
     {alias}
 
+(** An attribute that suppresses warning 39, “unused-rec-flag”. *)
+let attr_suppress_warning_39 ~loc =
+  let name = {txt = "ocaml.warning"; loc} in
+  Ast_helper.Attr.mk ~loc name (PStr [%str "-39"])
+
 let core_type_to_serialiser_type ~dir core_type : core_type =
   ignore dir;
   let loc = core_type.ptyp_loc in
@@ -390,12 +395,20 @@ module Type_decl_to_serialiser : sig
 end
 include Type_decl_to_serialiser
 
-let value_binding_with_constraint ~loc ~pat ~expr ~constraint_ =
-  {(value_binding ~loc ~pat ~expr) with pvb_constraint = Some (Pvc_constraint {typ = constraint_; locally_abstract_univars = []})}
+let value_binding_with_constraint
+  ~loc
+  ~pat
+  ~expr
+  ~constraint_
+  ~attributes
+= {(value_binding ~loc ~pat ~expr) with
+  pvb_constraint = Some (Pvc_constraint {typ = constraint_; locally_abstract_univars = []});
+  pvb_attributes = attributes;
+}
 
 let type_decls_to_serialiser_str ~dir type_decls : structure =
   (* FIXME: loc *)
-  pstr_value_list ~loc: Location.none Nonrecursive (
+  pstr_value_list ~loc: Location.none Recursive (
     List.map
       (fun type_decl ->
         let loc = type_decl.ptype_loc in
@@ -404,6 +417,7 @@ let type_decls_to_serialiser_str ~dir type_decls : structure =
           ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc dir type_decl)
           ~expr: (type_decl_to_serialiser ~dir type_decl)
           ~constraint_: (type_decl_to_serialiser_type ~dir type_decl)
+          ~attributes: [attr_suppress_warning_39 ~loc]
       )
       type_decls
   )
@@ -426,6 +440,7 @@ let type_decls_to_aliases_str ~options type_decls : structure =
                 ]
             )
             ~constraint_: (type_decl_to_serialiser_type ~dir: Of_biniou ~exn: false type_decl)
+            ~attributes: []
         ]
       )
       type_decls
