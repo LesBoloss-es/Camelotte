@@ -16,14 +16,14 @@ it more readable and more deterministic.
 
   $ test_ppx_deriving_biniou () {
   >   local tmpfile output result
-  >   tmpfile=$(mktemp --suffix=.ml)
+  >   tmpfile=$(mktemp)
   >   cat > $tmpfile
   >   output=$(
   >     ocamlfind ocamlc \
   >       -package biniou \
   >       -package ppx_deriving_biniou.runtime \
   >       -ppx 'ppx_deriving_biniou --as-ppx' \
-  >       -dsource -c "$tmpfile" \
+  >       -dsource -c -impl "$tmpfile" \
   >       2>&1
   >   )
   >   result=$?
