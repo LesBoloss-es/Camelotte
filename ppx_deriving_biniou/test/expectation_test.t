@@ -49,6 +49,30 @@ Alias
       | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
           Error (where, what)
 
+Alias with argument
+-------------------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type 'a t = 'a list [@@deriving biniou]
+  > EOF
+  type 'a t = 'a list[@@deriving biniou]
+  let to_biniou : ('a -> Bi_io.tree) -> 'a t -> Bi_io.tree =
+    fun _tvar_a_to_biniou ->
+      Ppx_deriving_biniou_runtime.list_to_biniou _tvar_a_to_biniou
+  let of_biniou_exn : (Bi_io.tree -> 'a) -> Bi_io.tree -> 'a t =
+    fun _tvar_a_of_biniou_exn ->
+      Ppx_deriving_biniou_runtime.list_of_biniou_exn _tvar_a_of_biniou_exn
+  let of_biniou :
+    (Bi_io.tree -> 'a) ->
+      Bi_io.tree -> ('a t, (string * Bi_io.tree)) Stdlib.Result.t
+    =
+    fun _tvar_a_of_biniou_exn ->
+      fun x ->
+        try Ok ((of_biniou_exn _tvar_a_of_biniou_exn) x)
+        with
+        | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+            Error (where, what)
+
 Record
 ------
 

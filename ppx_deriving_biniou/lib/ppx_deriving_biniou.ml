@@ -193,6 +193,14 @@ module Type_decl_to_serialiser : sig
     (** Given a type_decl, return a Parsetree expression that is a function
         converting to or from biniou, depending on the direction argument. *)
     val type_decl_to_serialiser : dir: direction -> type_declaration -> expression
+
+    (** Given an expression, wrap it in a function (expression) that grabs the
+        [_tvar_a_<dir>_biniou] arguments, if needed. *)
+    val type_decl_add_fun_params : dir: direction -> type_declaration -> expression -> expression
+
+    (** Given an expression, wrap it in an application (expression) that passes
+        it the [_tvar_a_<dir>_biniou] arguments, if needed. *)
+    val type_decl_apply_fun_params : dir: direction -> type_declaration -> expression -> expression
   end
 = struct
   let ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls =
@@ -328,31 +336,47 @@ module Type_decl_to_serialiser : sig
         (catchall ~loc (mangle_type_decl dir type_decl));
       ]
 
+  let type_decl_add_fun_params ~dir type_decl expr =
+    let loc = type_decl.ptype_loc in
+    match type_decl.ptype_params with
+    | [] -> expr
+    | params ->
+      pexp_function
+        ~loc
+        (
+          List.map
+            (fun (param, _) ->
+              let loc = param.ptyp_loc in
+              match param with
+              | {ptyp_desc = Ptyp_var var; _} ->
+                pparam_val ~loc Nolabel None (pvar ~loc @@ mangle_type_var ~dir var)
+              | _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou: unexpected type parameter that is not Ptyp_var"
+            )
+            params
+        )
+        None @@
+        Pfunction_body expr
+
+  let type_decl_apply_fun_params ~dir type_decl expr =
+    let loc = type_decl.ptype_loc in
+    match type_decl.ptype_params with
+    | [] -> expr
+    | params ->
+      pexp_apply ~loc expr (
+        List.map
+          (fun (param, _) ->
+            let loc = param.ptyp_loc in
+            match param with
+            | {ptyp_desc = Ptyp_var var; _} ->
+              (Nolabel, pexp_ident ~loc @@ longident ~loc @@ mangle_type_var ~dir var)
+            | _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou: unexpected type parameter that is not Ptyp_var"
+          )
+          params
+      )
+
   let type_decl_to_serialiser ~dir type_decl =
     let loc = type_decl.ptype_loc in
-    let grab_fun_params expr =
-      (* Given an expression, wrap it in a function (expression) that grabs the
-         [_tvar_a_<dir>_biniou] arguments, if needed. *)
-      match type_decl.ptype_params with
-      | [] -> expr
-      | params ->
-        pexp_function
-          ~loc
-          (
-            List.map
-              (fun (param, _) ->
-                let loc = param.ptyp_loc in
-                match param with
-                | {ptyp_desc = Ptyp_var var; _} ->
-                  pparam_val ~loc Nolabel None (pvar ~loc @@ mangle_type_var ~dir var)
-                | _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou: unexpected type parameter that is not Ptyp_var"
-              )
-              params
-          )
-          None @@
-          Pfunction_body expr
-    in
-    grab_fun_params @@
+    type_decl_add_fun_params ~dir type_decl @@
       match type_decl.ptype_kind with
       | Ptype_abstract ->
         (
@@ -393,12 +417,20 @@ let type_decls_to_aliases_str ~options type_decls : structure =
           value_binding_with_constraint
             ~loc
             ~pat: (ppat_var ~loc @@ mangle_type_decl' ~loc ~exn: false Of_biniou type_decl)
-            ~expr: [%expr fun x ->
-              try
-                Ok ([%e pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))] x)
-              with
-                | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) -> Error (where, what)
-            ]
+            ~expr: (
+              type_decl_add_fun_params ~dir: Of_biniou type_decl @@
+                [%expr fun x ->
+                  try
+                    Ok (
+                      [%e type_decl_apply_fun_params ~dir: Of_biniou type_decl @@
+                          pexp_ident ~loc (longident ~loc (mangle_type_decl ~exn: true Of_biniou type_decl))
+                      ]
+                        x
+                    )
+                  with
+                    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) -> Error (where, what)
+                ]
+            )
             ~constraint_: (type_decl_to_serialiser_type ~dir: Of_biniou ~exn: false type_decl)
         ]
       )
