@@ -194,8 +194,15 @@ module Type_decl_to_serialiser : sig
       ~loc
       (
         match type_decl.ptype_kind with
+        | Ptype_abstract ->
+          (
+            match type_decl.ptype_manifest with
+            | None -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support abstract types without manifest"
+            | Some core_type -> core_type_to_serialiser ~dir core_type
+          )
+        | Ptype_open -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support open types"
+        | Ptype_variant _constr_decls -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support variant types"
         | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
-        | _ -> Location.raise_errorf ~loc "type_decl"
       )
       (type_decl_to_serialiser_type ~dir type_decl)
 end

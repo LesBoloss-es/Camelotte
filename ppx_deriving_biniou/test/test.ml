@@ -11,6 +11,11 @@ module Basic = struct
   [@@deriving ord, show {with_path = false}, biniou {alias = false}, qcheck]
 end
 
+module Alias = struct
+  type t = string option
+  [@@deriving ord, show {with_path = false}, biniou {alias = false}, qcheck]
+end
+
 (** Biniou trees can contain optional information. This function erases it. It
     is useful in testing context to verify that we still manage to unserialise
     what needs to be unserialised. *)
@@ -89,6 +94,7 @@ let () =
       roundtrip_test_case "int32 list" ~arbitrary: QCheck.(list int32) ~compare: (List.compare Int32.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(list_to_biniou int32_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(list_of_biniou_exn int32_of_biniou_exn);
       (* roundtrip_test_case "int64 array" ~arbitrary: QCheck.(array int64) ~compare: (Array.compare Int64.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(array_to_biniou int64_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(array_of_biniou int64_of_biniou); *)
       roundtrip_test_case' "basic" (module Basic);
+      roundtrip_test_case' "alias" (module Alias);
       ]
     )
   ]
