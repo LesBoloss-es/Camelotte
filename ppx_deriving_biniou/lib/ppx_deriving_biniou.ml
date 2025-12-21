@@ -458,26 +458,57 @@ let type_decl_to_serialiser_vd ~loc ~dir ?(exn = true) type_decl : value_descrip
     ~type_: (type_decl_to_serialiser_type ~dir ~exn type_decl)
     ~prim: []
 
-let type_decl_to_serialiser_vds ~options ~loc type_decl : value_description list =
-  [type_decl_to_serialiser_vd ~loc ~dir: To_biniou type_decl;
-  type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: true type_decl;
-  ] @
-    (if options.alias then [type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: false type_decl] else [])
+let type_decl_to_serialiser_vds ~to_biniou ~of_biniou ~options ~loc type_decl : value_description list =
+  (if to_biniou then [type_decl_to_serialiser_vd ~loc ~dir: To_biniou type_decl] else []) @
+  (if of_biniou then [type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: true type_decl] else []) @
+    (if of_biniou && options.alias then [type_decl_to_serialiser_vd ~loc ~dir: Of_biniou ~exn: false type_decl] else [])
 
-let type_decl_str ~options ~path (type_decls : type_declaration list) : structure =
+let type_decl_str ~to_biniou ~of_biniou ~options ~path (type_decls : type_declaration list) : structure =
   ignore path;
   let options = parse_options options in
-  List.concat_map (fun dir -> type_decls_to_serialiser_str ~dir type_decls) [To_biniou; Of_biniou] @
-    type_decls_to_aliases_str ~options type_decls
+  (if to_biniou then type_decls_to_serialiser_str ~dir: To_biniou type_decls else []) @
+  (if of_biniou then type_decls_to_serialiser_str ~dir: Of_biniou type_decls else []) @
+    (if of_biniou then type_decls_to_aliases_str ~options type_decls else [])
 
-let type_decl_sig ~options ~path (type_decls : type_declaration list) : signature =
+let type_decl_sig ~to_biniou ~of_biniou ~options ~path (type_decls : type_declaration list) : signature =
   ignore path;
   let options = parse_options options in
   List.concat_map
     (fun type_decl ->
       let loc = type_decl.ptype_loc in
-      List.map (psig_value ~loc) (type_decl_to_serialiser_vds ~options ~loc type_decl)
+      List.map (psig_value ~loc) (type_decl_to_serialiser_vds ~to_biniou ~of_biniou ~options ~loc type_decl)
     )
     type_decls
 
-let () = Ppx_deriving.(register (create "biniou" ~type_decl_str ~type_decl_sig ()))
+let () =
+  Ppx_deriving.(
+    register (
+      create
+        "biniou"
+        ~type_decl_str: (type_decl_str ~to_biniou: true ~of_biniou: true)
+        ~type_decl_sig: (type_decl_sig ~to_biniou: true ~of_biniou: true)
+        ()
+    )
+  )
+
+let () =
+  Ppx_deriving.(
+    register (
+      create
+        "to_biniou"
+        ~type_decl_str: (type_decl_str ~to_biniou: true ~of_biniou: false)
+        ~type_decl_sig: (type_decl_sig ~to_biniou: true ~of_biniou: false)
+        ()
+    )
+  )
+
+let () =
+  Ppx_deriving.(
+    register (
+      create
+        "of_biniou"
+        ~type_decl_str: (type_decl_str ~to_biniou: false ~of_biniou: true)
+        ~type_decl_sig: (type_decl_sig ~to_biniou: false ~of_biniou: true)
+        ()
+    )
+  )

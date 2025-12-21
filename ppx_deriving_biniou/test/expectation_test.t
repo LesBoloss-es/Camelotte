@@ -46,6 +46,45 @@ Alias
     Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
     [@@ocaml.warning "-32"]
 
+Alias (to_biniou)
+-----------------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = string [@@deriving to_biniou]
+  >   let _ = of_biniou
+  > EOF
+  type t = string[@@deriving to_biniou]
+  let rec to_biniou : t -> Bi_io.tree =
+    Ppx_deriving_biniou_runtime.string_to_biniou[@@ocaml.warning "-39"]
+  let _ = of_biniou
+  Line 2, characters 10-19:
+  2 |   let _ = of_biniou
+                ^^^^^^^^^
+  Error: Unbound value of_biniou
+  Hint: Did you mean to_biniou?
+  [2]
+
+Alias (of_biniou)
+-----------------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = string [@@deriving of_biniou]
+  >   let _ = to_biniou
+  > EOF
+  type t = string[@@deriving of_biniou]
+  let rec of_biniou_exn : Bi_io.tree -> t =
+    Ppx_deriving_biniou_runtime.string_of_biniou_exn[@@ocaml.warning "-39"]
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
+  let _ = to_biniou
+  Line 2, characters 10-19:
+  2 |   let _ = to_biniou
+                ^^^^^^^^^
+  Error: Unbound value to_biniou
+  Hint: Did you mean of_biniou?
+  [2]
+
 Alias with argument
 -------------------
 
