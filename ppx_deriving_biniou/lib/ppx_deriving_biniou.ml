@@ -31,13 +31,13 @@ let mangle_lid ?exn dir lid =
 let mangle_type_decl ?exn dir td =
   Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string ?exn dir)) td
 
-module Core_type_to_function : sig
+module Core_type_to_serialiser : sig
     (** Given a core_type, return a Parsetree expression that is a function
-        converting to or from biniou, depending on the direction argument.. *)
-    val core_type_to_function : dir: direction -> core_type -> expression
+        converting to or from biniou, depending on the direction argument. *)
+    val core_type_to_serialiser : dir: direction -> core_type -> expression
   end
 = struct
-  let rec core_type_to_function ~dir core_type =
+  let rec core_type_to_serialiser ~dir core_type =
     let loc = core_type.ptyp_loc in
     match core_type.ptyp_desc with
     (* | Ptyp_any *)
@@ -53,10 +53,10 @@ module Core_type_to_function : sig
     (* | Ptyp_open of Longident.t Asttypes.loc * core_type *)
     (* | Ptyp_extension of extension *)
     (* | Ptyp_constr of Longident.t Asttypes.loc * core_type list *)
-    | Ptyp_constr (ty, args) -> ptyp_constr_to_function ~loc ~dir ty args
+    | Ptyp_constr (ty, args) -> ptyp_constr_to_serialiser ~loc ~dir ty args
     | _ -> Location.raise_errorf ~loc "core_type: cannot convert to/from Biniou"
 
-  and ptyp_constr_to_function ~loc ~dir ty args =
+  and ptyp_constr_to_serialiser ~loc ~dir ty args =
     let in_runtime_lib =
       List.map (fun x -> Lident x) ["int"; "int32"; "int64"; "float"; "array"; "list"]
     in
@@ -69,15 +69,15 @@ module Core_type_to_function : sig
     match args with
     | [] -> fn
     | args ->
-      let args_fns = List.map (core_type_to_function ~dir) args in
+      let args_fns = List.map (core_type_to_serialiser ~dir) args in
       pexp_apply ~loc fn (List.map (fun arg_fn -> (Nolabel, arg_fn)) args_fns)
 end
-include Core_type_to_function
+include Core_type_to_serialiser
 
-module Type_decl_to_function : sig
-    (** Given a type_decl, return Parsetree expressions that are functions to
-        convert to and from biniou. *)
-    val type_decl_to_function : dir: direction -> type_declaration -> expression
+module Type_decl_to_serialiser : sig
+    (** Given a type_decl, return a Parsetree expression that is a function
+        converting to or from biniou, depending on the direction argument. *)
+    val type_decl_to_serialiser : dir: direction -> type_declaration -> expression
   end
 = struct
   let ptype_record ~loc ~dir type_decl lab_decls =
@@ -97,7 +97,7 @@ module Type_decl_to_function : sig
             pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
             pexp_apply
               ~loc
-              (core_type_to_function ~dir lab_decl.pld_type)
+              (core_type_to_serialiser ~dir lab_decl.pld_type)
               [(Nolabel, pexp_field ~loc (pexp_ident ~loc (longident ~loc "x")) (longident ~loc name))]
           ]
         )
@@ -122,7 +122,7 @@ module Type_decl_to_function : sig
                         longident ~loc name,
                         pexp_apply
                           ~loc
-                          (core_type_to_function ~dir lab_decl.pld_type)
+                          (core_type_to_serialiser ~dir lab_decl.pld_type)
                           [
                             (
                               Nolabel,
@@ -159,13 +159,13 @@ module Type_decl_to_function : sig
         );
       ]
 
-  let type_decl_to_function ~dir type_decl =
+  let type_decl_to_serialiser ~dir type_decl =
     let loc = type_decl.ptype_loc in
     match type_decl.ptype_kind with
     | Ptype_record lab_decls -> ptype_record ~loc ~dir type_decl lab_decls
     | _ -> Location.raise_errorf ~loc "type_decl"
 end
-include Type_decl_to_function
+include Type_decl_to_serialiser
 
 let type_decl_str
     ~(options : (string * expression) list)
@@ -184,7 +184,7 @@ let type_decl_str
             value_binding
               ~loc
               ~pat: (ppat_var ~loc {txt = mangle_type_decl dir type_decl; loc})
-              ~expr: (type_decl_to_function ~dir type_decl)
+              ~expr: (type_decl_to_serialiser ~dir type_decl)
           )
           type_decls
       )
