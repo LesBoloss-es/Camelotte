@@ -122,15 +122,15 @@ Record
     foo: int ;
     bar: float list }[@@deriving biniou]
   let rec to_biniou : t -> Bi_io.tree =
-    fun x ->
+    fun r ->
       `Record
         [|((Some "foo"), (Bi_io.hash_name "foo"),
-            (Ppx_deriving_biniou_runtime.int_to_biniou x.foo));((Some "bar"),
+            (Ppx_deriving_biniou_runtime.int_to_biniou r.foo));((Some "bar"),
                                                                  (Bi_io.hash_name
                                                                     "bar"),
                                                                  (Ppx_deriving_biniou_runtime.list_to_biniou
                                                                     Ppx_deriving_biniou_runtime.float_to_biniou
-                                                                    x.bar))|]
+                                                                    r.bar))|]
     [@@ocaml.warning "-39"]
   let rec of_biniou_exn : Bi_io.tree -> t =
     function
@@ -176,6 +176,48 @@ Variant
         Foo
           ((Ppx_deriving_biniou_runtime.int_of_biniou_exn arg0),
             (Ppx_deriving_biniou_runtime.float_of_biniou_exn arg1))
+    | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
+    [@@ocaml.warning "-39"]
+  let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =
+    Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn of_biniou_exn
+    [@@ocaml.warning "-32"]
+
+Variant with record
+-------------------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = Foo of {bar: int; baz: float} [@@deriving biniou]
+  > EOF
+  type t =
+    | Foo of {
+    bar: int ;
+    baz: float } [@@deriving biniou]
+  let rec to_biniou : t -> Bi_io.tree =
+    function
+    | Foo r ->
+        `Num_variant
+          (0,
+            (Some
+               (`Record
+                  [|((Some "bar"), (Bi_io.hash_name "bar"),
+                      (Ppx_deriving_biniou_runtime.int_to_biniou r.bar));
+                    ((Some "baz"), (Bi_io.hash_name "baz"),
+                      (Ppx_deriving_biniou_runtime.float_to_biniou r.baz))|])))
+    [@@ocaml.warning "-39"]
+  let rec of_biniou_exn : Bi_io.tree -> t =
+    function
+    | `Num_variant (0, Some (`Record r)) ->
+        Foo
+          {
+            bar =
+              (Ppx_deriving_biniou_runtime.int_of_biniou_exn
+                 (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                    "bar" r));
+            baz =
+              (Ppx_deriving_biniou_runtime.float_of_biniou_exn
+                 (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                    "baz" r))
+          }
     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t
     [@@ocaml.warning "-39"]
   let of_biniou : Bi_io.tree -> (t, (string * Bi_io.tree)) Stdlib.Result.t =

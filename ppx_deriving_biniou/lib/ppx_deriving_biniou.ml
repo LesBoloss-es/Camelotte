@@ -213,6 +213,63 @@ module Type_decl_to_serialiser : sig
     val type_decl_apply_fun_params : dir: direction -> type_declaration -> expression -> expression
   end
 = struct
+
+  (** Construction of a record value, be it the serialised or unserialised
+      version. This assumes that the record has already been matched into
+      variable [r]. *)
+  let record_to_serialiser ~loc ~dir type_decl lab_decls =
+    match dir with
+    | To_biniou ->
+      pexp_variant ~loc "Record" @@
+      some @@
+      pexp_array ~loc @@
+      List.map
+        (fun lab_decl ->
+          let loc = lab_decl.pld_loc in
+          let name = lab_decl.pld_name.txt in
+          let pexp_name = let loc = lab_decl.pld_name.loc in pexp_constant ~loc (Pconst_string (name, loc, None)) in
+          pexp_tuple ~loc [
+            pexp_construct ~loc (longident ~loc "Some") (Some pexp_name);
+            pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
+            pexp_apply
+              ~loc
+              (core_type_to_serialiser ~dir lab_decl.pld_type)
+              [(Nolabel, pexp_field ~loc (pexp_ident ~loc (longident ~loc "r")) (longident ~loc name))]
+          ]
+        )
+        lab_decls
+    | Of_biniou ->
+      pexp_record
+        ~loc
+        (
+          List.map
+            (fun lab_decl ->
+              let loc = lab_decl.pld_loc in
+              let name = lab_decl.pld_name.txt in
+              (
+                longident ~loc name,
+                pexp_apply
+                  ~loc
+                  (core_type_to_serialiser ~dir lab_decl.pld_type)
+                  [
+                    (
+                      Nolabel,
+                      pexp_apply
+                        ~loc
+                        (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.record_find")
+                        [
+                          (Labelled "name", pexp_constant ~loc (Pconst_string (mangle_type_decl Of_biniou type_decl, loc, None)));
+                          (Nolabel, pexp_constant ~loc (Pconst_string (name, loc, None)));
+                          (Nolabel, pexp_ident ~loc (longident ~loc "r"));
+                        ]
+                    )
+                  ]
+              )
+            )
+            lab_decls
+        )
+        None
+
   let ptype_variant_to_serialiser ~loc ~dir type_decl constr_decls =
     let nums = List.mapi (fun i _ -> Pconst_integer (string_of_int i, None)) constr_decls in
     let constr_decl_to_pieces constr_decl =
@@ -242,7 +299,13 @@ module Type_decl_to_serialiser : sig
           [%pat? Some (`Tuple[%p ppat_array ~loc @@ List.map (ppat_var ~loc) arg_names])],
           Some (pexp_tuple ~loc (List.map2 (fun arg_name arg -> [%expr [%e core_type_to_serialiser ~dir arg] [%e arg_name]]) arg_names' args))
         )
-      | Pcstr_record _ -> Location.raise_errorf ~loc "Ppx_deriving_runtime does not support records in constructors"
+      | Pcstr_record lab_decls ->
+        (
+          Some [%pat? r],
+          [%expr Some [%e record_to_serialiser ~loc ~dir type_decl lab_decls]],
+          [%pat? Some (`Record r)],
+          Some (record_to_serialiser ~loc ~dir type_decl lab_decls)
+        )
     in
     match dir with
     | To_biniou ->
@@ -282,67 +345,10 @@ module Type_decl_to_serialiser : sig
 
   let ptype_record_to_serialiser ~loc ~dir type_decl lab_decls =
     match dir with
-    | To_biniou ->
-      pexp_fun ~loc Nolabel None (pvar ~loc "x") @@
-      pexp_variant ~loc "Record" @@
-      some @@
-      pexp_array ~loc @@
-      List.map
-        (fun lab_decl ->
-          let loc = lab_decl.pld_loc in
-          let name = lab_decl.pld_name.txt in
-          let pexp_name = let loc = lab_decl.pld_name.loc in pexp_constant ~loc (Pconst_string (name, loc, None)) in
-          pexp_tuple ~loc [
-            pexp_construct ~loc (longident ~loc "Some") (Some pexp_name);
-            pexp_apply ~loc (pexp_ident ~loc @@ longident ~loc "Bi_io.hash_name") [(Nolabel, pexp_name)];
-            pexp_apply
-              ~loc
-              (core_type_to_serialiser ~dir lab_decl.pld_type)
-              [(Nolabel, pexp_field ~loc (pexp_ident ~loc (longident ~loc "x")) (longident ~loc name))]
-          ]
-        )
-        lab_decls
+    | To_biniou -> [%expr fun r -> [%e record_to_serialiser ~loc ~dir type_decl lab_decls]]
     | Of_biniou ->
       pexp_function_cases ~loc [
-        (
-          case
-            ~lhs: (
-              ppat_variant ~loc "Record" (Some (pvar ~loc "r"))
-            )
-            ~guard: None
-            ~rhs: (
-              pexp_record
-                ~loc
-                (
-                  List.map
-                    (fun lab_decl ->
-                      let loc = lab_decl.pld_loc in
-                      let name = lab_decl.pld_name.txt in
-                      (
-                        longident ~loc name,
-                        pexp_apply
-                          ~loc
-                          (core_type_to_serialiser ~dir lab_decl.pld_type)
-                          [
-                            (
-                              Nolabel,
-                              pexp_apply
-                                ~loc
-                                (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.record_find")
-                                [
-                                  (Labelled "name", pexp_constant ~loc (Pconst_string (mangle_type_decl Of_biniou type_decl, loc, None)));
-                                  (Nolabel, pexp_constant ~loc (Pconst_string (name, loc, None)));
-                                  (Nolabel, pexp_ident ~loc (longident ~loc "r"));
-                                ]
-                            )
-                          ]
-                      )
-                    )
-                    lab_decls
-                )
-                None
-            )
-        );
+        (case ~lhs: [%pat? `Record r] ~guard: None ~rhs: (record_to_serialiser ~loc ~dir type_decl lab_decls));
         (catchall ~loc (mangle_type_decl dir type_decl));
       ]
 

@@ -20,6 +20,7 @@ module Variant = struct
     | Foo of int
     | Bar of string list
     | Baz of float * int32 array
+    | Qux of {bar: int64 list; baz: (string * char) array}
   [@@deriving ord, show, biniou, qcheck]
 end
 
