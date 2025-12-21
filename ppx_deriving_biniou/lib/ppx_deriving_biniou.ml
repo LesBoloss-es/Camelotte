@@ -60,6 +60,22 @@ let type_decl_to_serialiser_type ~dir ?(exn = true) type_decl : core_type =
   | Of_biniou, true -> [%type: Bi_io.tree -> [%t ptyp_constr ~loc name []]]
   | Of_biniou, false -> [%type: Bi_io.tree -> ([%t ptyp_constr ~loc name []], (string * Bi_io.tree)) Stdlib.Result.t]
 
+(** For pattern matching, provide a catch-all that raises
+    {!Ppx_deriving_biniou_runtime.Could_not_convert}. *)
+let catchall ~loc name =
+  case
+    ~lhs: (pvar ~loc "t")
+    ~guard: None
+    ~rhs: (
+      pexp_apply
+        ~loc
+        (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.could_not_convert")
+        [
+          (Nolabel, pexp_constant ~loc (Pconst_string (name, loc, None)));
+          (Nolabel, pexp_ident ~loc (longident ~loc "t"));
+        ]
+    )
+
 module Core_type_to_serialiser : sig
     (** Given a core_type, return a Parsetree expression that is a function
         converting to or from biniou, depending on the direction argument. *)
@@ -69,21 +85,31 @@ module Core_type_to_serialiser : sig
   let rec core_type_to_serialiser ~dir core_type =
     let loc = core_type.ptyp_loc in
     match core_type.ptyp_desc with
-    (* | Ptyp_any *)
-    (* | Ptyp_var of string *)
-    (* | Ptyp_arrow of Asttypes.arg_label * core_type * core_type *)
-    (* | Ptyp_tuple of core_type list *)
-    (* | Ptyp_object of object_field list * Asttypes.closed_flag *)
-    (* | Ptyp_class of Longident.t Asttypes.loc * core_type list *)
-    (* | Ptyp_alias of core_type * string Asttypes.loc *)
-    (* | Ptyp_variant of row_field list * Asttypes.closed_flag * Asttypes.label list option *)
-    (* | Ptyp_poly of string Asttypes.loc list * core_type *)
-    (* | Ptyp_package of package_type *)
-    (* | Ptyp_open of Longident.t Asttypes.loc * core_type *)
-    (* | Ptyp_extension of extension *)
-    (* | Ptyp_constr of Longident.t Asttypes.loc * core_type list *)
+    | Ptyp_any -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_any"
+    | Ptyp_var _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_var"
+    | Ptyp_arrow _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_arrow"
+    | Ptyp_tuple core_types -> ptyp_tuple_to_serialiser ~loc ~dir core_types
+    | Ptyp_object _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_object"
+    | Ptyp_class _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_class"
+    | Ptyp_alias _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_alias"
+    | Ptyp_variant _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_variant"
+    | Ptyp_poly _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_poly"
+    | Ptyp_package _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_package"
+    | Ptyp_open _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_open"
+    | Ptyp_extension _ -> Location.raise_errorf ~loc "Ppx_deriving_biniou does not support Ptyp_extension"
     | Ptyp_constr (ty, args) -> ptyp_constr_to_serialiser ~loc ~dir ty args
-    | _ -> Location.raise_errorf ~loc "core_type: cannot convert to/from Biniou"
+
+  and ptyp_tuple_to_serialiser ~loc ~dir core_types =
+    let vars = List.mapi (fun i _ -> ("x" ^ string_of_int i)) core_types in
+    let var_patterns = List.map2 (fun var core_type -> pvar ~loc: core_type.ptyp_loc var) vars core_types in
+    let var_serialised = List.map2 (fun var core_type -> pexp_apply ~loc (core_type_to_serialiser ~dir core_type) [Nolabel, pexp_ident ~loc (longident ~loc var)]) vars core_types in
+    match dir with
+    | To_biniou -> pexp_fun ~loc Nolabel None (ppat_tuple ~loc var_patterns) @@ pexp_variant ~loc "Tuple" @@ some @@ pexp_array ~loc @@ var_serialised
+    | Of_biniou ->
+      pexp_function_cases ~loc [
+        case ~lhs: (ppat_variant ~loc "Tuple" @@ some @@ ppat_array ~loc var_patterns) ~guard: None ~rhs: (pexp_tuple ~loc var_serialised);
+        catchall ~loc "FIXME";
+      ]
 
   and ptyp_constr_to_serialiser ~loc ~dir ty args =
     let in_runtime_lib =
@@ -172,20 +198,7 @@ module Type_decl_to_serialiser : sig
                 None
             )
         );
-        (
-          case
-            ~lhs: (pvar ~loc "t")
-            ~guard: None
-            ~rhs: (
-              pexp_apply
-                ~loc
-                (pexp_ident ~loc @@ longident ~loc "Ppx_deriving_biniou_runtime.could_not_convert")
-                [
-                  (Nolabel, pexp_constant ~loc (Pconst_string (mangle_type_decl Of_biniou type_decl, loc, None)));
-                  (Nolabel, pexp_ident ~loc (longident ~loc "t"));
-                ]
-            )
-        );
+        (catchall ~loc (mangle_type_decl dir type_decl));
       ]
 
   let type_decl_to_serialiser ~dir type_decl =

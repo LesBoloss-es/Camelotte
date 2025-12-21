@@ -12,7 +12,8 @@ module Basic = struct
 end
 
 module Alias = struct
-  type t = string option
+  type t =
+  (string * float) option
   [@@deriving ord, show {with_path = false}, biniou {alias = false}, qcheck]
 end
 
