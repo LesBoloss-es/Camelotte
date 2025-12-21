@@ -10,10 +10,10 @@
         version = "dev";
         src = utils.thisSubdirAsDuneSource ./.;
         buildInputs = with opkgs; [
-          biniou
           ppxlib
           ppx_import
         ];
+        propagatedBuildInputs = [ opkgs.biniou ];
         doCheck = true;
         checkInputs = with opkgs; [
           ppx_deriving_qcheck
