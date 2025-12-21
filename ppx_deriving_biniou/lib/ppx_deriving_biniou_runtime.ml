@@ -17,6 +17,9 @@ let unit_of_biniou_exn : tree -> unit = function `Unit -> () | t -> could_not_co
 let bool_to_biniou : bool -> tree = fun b -> `Bool b
 let bool_of_biniou_exn : tree -> bool = function `Bool b -> b | t -> could_not_convert "bool_of_biniou" t
 
+let char_to_biniou : char -> tree = fun c -> `Int8 c
+let char_of_biniou_exn : tree -> char = function `Int8 c -> c | t -> could_not_convert "char_of_biniou" t
+
 let string_to_biniou : string -> tree = fun s -> `String s
 let string_of_biniou_exn : tree -> string = function `String s -> s | t -> could_not_convert "string_of_biniou" t
 
@@ -44,6 +47,14 @@ let option_of_biniou_exn (a_of_biniou : tree -> 'a) : tree -> 'a option = functi
   | `Num_variant (0, None) -> None
   | `Num_variant (1, Some x) -> Some (a_of_biniou x)
   | t -> could_not_convert "option_to_biniou" t
+
+let result_to_biniou (a_to_biniou : 'a -> tree) (e_to_biniou : 'e -> tree) : ('a, 'e) result -> tree = function
+  | Ok x -> `Num_variant (0, Some (a_to_biniou x))
+  | Error y -> `Num_variant (1, Some (e_to_biniou y))
+let result_of_biniou_exn (a_of_biniou : tree -> 'a) (e_of_biniou : tree -> 'e) : tree -> ('a, 'e) result = function
+  | `Num_variant (0, Some x) -> Ok (a_of_biniou x)
+  | `Num_variant (1, Some y) -> Ok (e_of_biniou y)
+  | t -> could_not_convert "result_of_biniou" t
 
 (* NOTE: Biniou has a notion of arrays, but they are really meant as
    heterogeneous arrays, which does not match the notion in OCaml. *)
