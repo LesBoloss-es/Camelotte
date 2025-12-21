@@ -87,7 +87,7 @@ module Core_type_to_serialiser : sig
 
   and ptyp_constr_to_serialiser ~loc ~dir ty args =
     let in_runtime_lib =
-      List.map (fun x -> Lident x) ["int"; "int32"; "int64"; "float"; "array"; "list"]
+      List.map lident ["unit"; "bool"; "string"; "int"; "int32"; "int64"; "float"; "option"; "array"; "list"]
     in
     let ty_txt =
       if List.mem ty.txt in_runtime_lib then

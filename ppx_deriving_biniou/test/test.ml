@@ -1,7 +1,10 @@
 module Basic = struct
   type t = {
+    un: unit;
     bar: int;
+    baar: bool;
     baz: float;
+    baaz: string option;
     qux: int32 list;
     quux: int64 array;
   }

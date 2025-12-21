@@ -11,6 +11,15 @@ let () =
       Some (Format.asprintf "Could_not_convert \"%s\" %a" name pp_tree tree)
     | _ -> None
 
+let unit_to_biniou : unit -> tree = fun () -> `Unit
+let unit_of_biniou_exn : tree -> unit = function `Unit -> () | t -> could_not_convert "unit_of_biniou" t
+
+let bool_to_biniou : bool -> tree = fun b -> `Bool b
+let bool_of_biniou_exn : tree -> bool = function `Bool b -> b | t -> could_not_convert "bool_of_biniou" t
+
+let string_to_biniou : string -> tree = fun s -> `String s
+let string_of_biniou_exn : tree -> string = function `String s -> s | t -> could_not_convert "string_of_biniou" t
+
 (* NOTE: We use signed variable-length integers to be most flexible, but we will
    need to give the users the choice in the end. *)
 let int_to_biniou : int -> tree = fun x -> `Svint x
@@ -27,6 +36,14 @@ let int64_of_biniou_exn : tree -> int64 = function `Int64 x -> x | t -> could_no
 
 let float_to_biniou : float -> tree = fun x -> `Float64 x
 let float_of_biniou_exn : tree -> float = function `Float32 x | `Float64 x -> x | t -> could_not_convert "float_of_biniou" t
+
+let option_to_biniou (a_to_biniou : 'a -> tree) : 'a option -> tree = function
+  | None -> `Num_variant (0, None)
+  | Some x -> `Num_variant (1, Some (a_to_biniou x))
+let option_of_biniou_exn (a_of_biniou : tree -> 'a) : tree -> 'a option = function
+  | `Num_variant (0, None) -> None
+  | `Num_variant (1, Some x) -> Some (a_of_biniou x)
+  | t -> could_not_convert "option_to_biniou" t
 
 (* NOTE: Biniou has a notion of arrays, but they are really meant as
    heterogeneous arrays, which does not match the notion in OCaml. *)
