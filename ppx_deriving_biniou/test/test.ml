@@ -70,22 +70,22 @@ let roundtrip_test_case ?gen ?show ?arbitrary ~compare ~to_biniou ~of_biniou nam
 module type Roundtrip_test_caseable = sig
   type t [@@deriving ord, show]
   val to_biniou : t -> Bi_io.tree
-  val of_biniou : Bi_io.tree -> t
+  val of_biniou_exn : Bi_io.tree -> t
   val gen : t QCheck.Gen.t
 end
 
 let roundtrip_test_case' name (module R : Roundtrip_test_caseable) =
-  roundtrip_test_case name ~gen: R.gen ~show: R.show ~compare: R.compare ~to_biniou: R.to_biniou ~of_biniou: R.of_biniou
+  roundtrip_test_case name ~gen: R.gen ~show: R.show ~compare: R.compare ~to_biniou: R.to_biniou ~of_biniou: R.of_biniou_exn
 
 let () =
   Alcotest.run "ppx_deriving_biniou" [
     (
       "roundrip",
-      [roundtrip_test_case "int" ~arbitrary: QCheck.int ~compare: Int.compare ~to_biniou: Ppx_deriving_biniou_runtime.int_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int_of_biniou;
-      roundtrip_test_case "int32" ~arbitrary: QCheck.int32 ~compare: Int32.compare ~to_biniou: Ppx_deriving_biniou_runtime.int32_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int32_of_biniou;
-      roundtrip_test_case "int64" ~arbitrary: QCheck.int64 ~compare: Int64.compare ~to_biniou: Ppx_deriving_biniou_runtime.int64_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int64_of_biniou;
-      roundtrip_test_case "float" ~arbitrary: QCheck.float ~compare: Float.compare ~to_biniou: Ppx_deriving_biniou_runtime.float_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.float_of_biniou;
-      roundtrip_test_case "int32 list" ~arbitrary: QCheck.(list int32) ~compare: (List.compare Int32.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(list_to_biniou int32_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(list_of_biniou int32_of_biniou);
+      [roundtrip_test_case "int" ~arbitrary: QCheck.int ~compare: Int.compare ~to_biniou: Ppx_deriving_biniou_runtime.int_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int_of_biniou_exn;
+      roundtrip_test_case "int32" ~arbitrary: QCheck.int32 ~compare: Int32.compare ~to_biniou: Ppx_deriving_biniou_runtime.int32_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int32_of_biniou_exn;
+      roundtrip_test_case "int64" ~arbitrary: QCheck.int64 ~compare: Int64.compare ~to_biniou: Ppx_deriving_biniou_runtime.int64_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.int64_of_biniou_exn;
+      roundtrip_test_case "float" ~arbitrary: QCheck.float ~compare: Float.compare ~to_biniou: Ppx_deriving_biniou_runtime.float_to_biniou ~of_biniou: Ppx_deriving_biniou_runtime.float_of_biniou_exn;
+      roundtrip_test_case "int32 list" ~arbitrary: QCheck.(list int32) ~compare: (List.compare Int32.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(list_to_biniou int32_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(list_of_biniou_exn int32_of_biniou_exn);
       (* roundtrip_test_case "int64 array" ~arbitrary: QCheck.(array int64) ~compare: (Array.compare Int64.compare) ~to_biniou: Ppx_deriving_biniou_runtime.(array_to_biniou int64_to_biniou) ~of_biniou: Ppx_deriving_biniou_runtime.(array_of_biniou int64_of_biniou); *)
       roundtrip_test_case' "basic" (module Basic);
       ]

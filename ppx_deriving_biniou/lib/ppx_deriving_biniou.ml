@@ -17,15 +17,19 @@ let rec ldotl x = function
 
 type direction = To_biniou | Of_biniou
 
-let direction_to_string = function
-  | To_biniou -> "to_biniou"
-  | Of_biniou -> "of_biniou"
+(** Convert a {!direction} to a string. The optional argument [?exn], true by
+    default, adds a suffix [_exn] to the [Of_biniou] string only. *)
+let direction_to_string ?(exn = true) dir =
+  match dir, exn with
+  | To_biniou, _ -> "to_biniou"
+  | Of_biniou, true -> "of_biniou_exn"
+  | Of_biniou, false -> "of_biniou"
 
-let mangle_lid dir lid =
-  Ppx_deriving.mangle_lid (`Suffix (direction_to_string dir)) lid
+let mangle_lid ?exn dir lid =
+  Ppx_deriving.mangle_lid (`Suffix (direction_to_string ?exn dir)) lid
 
-let mangle_type_decl dir td =
-  Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string dir)) td
+let mangle_type_decl ?exn dir td =
+  Ppx_deriving.mangle_type_decl (`Suffix (direction_to_string ?exn dir)) td
 
 module Core_type_to_function : sig
     (** Given a core_type, return a Parsetree expression that is a function
@@ -155,8 +159,6 @@ module Type_decl_to_function : sig
         );
       ]
 
-  (** Given a type_decl, return Parsetree expressions that are functions to
-      convert to and from biniou. *)
   let type_decl_to_function ~dir type_decl =
     let loc = type_decl.ptype_loc in
     match type_decl.ptype_kind with
