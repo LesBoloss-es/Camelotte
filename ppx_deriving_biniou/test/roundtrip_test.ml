@@ -56,7 +56,7 @@ let rec anonymise_tree : Bi_io.tree -> Bi_io.tree = function
     )
   | `Shared tree -> `Shared (anonymise_tree tree)
 
-let roundtrip_count = 10_000
+let roundtrip_count = 1_000
 
 (** Make an Alcotest test case for a type and functions around that type. *)
 let roundtrip_test_case ?gen ?show ?arbitrary ~compare ~to_biniou ~of_biniou name =

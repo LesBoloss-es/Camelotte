@@ -1,0 +1,95 @@
+Test of generated code for ppx_deriving_biniou
+==============================================
+
+Tests of the user interface of the PPX, in its good and bad cases. This will
+only test that the produced code compiles, and allow us to inspect manually that
+it has the expected shape. This will not test that the produced code is a good
+serialisation. For this, see roundtrip_test.
+
+Setup
+-----
+
+Test function that gets some OCaml code on its standard input and run it through
+the OCaml compiler, with ppx_deriving_biniou enabled, and outputs the parsetree
+as well as the output of the compilation. The output is post-processed to make
+it more readable and more deterministic.
+
+  $ test_ppx_deriving_biniou () {
+  >   local tmpfile output result
+  >   tmpfile=$(mktemp --suffix=.ml)
+  >   cat > $tmpfile
+  >   output=$(
+  >     ocamlfind ocamlc \
+  >       -package biniou \
+  >       -package ppx_deriving_biniou.runtime \
+  >       -ppx 'ppx_deriving_biniou --as-ppx' \
+  >       -dsource -c "$tmpfile" \
+  >       2>&1
+  >   )
+  >   result=$?
+  >   echo "$output" | sed 's|File "[^"]*", line|Line|'
+  >   return $result
+  > }
+
+Alias
+-----
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = string [@@deriving biniou]
+  > EOF
+  type t = string[@@deriving biniou]
+  let to_biniou =
+    (Ppx_deriving_biniou_runtime.string_to_biniou : t -> Bi_io.tree)
+  let of_biniou_exn =
+    (Ppx_deriving_biniou_runtime.string_of_biniou_exn : Bi_io.tree -> t)
+  let of_biniou x =
+    try Ok (of_biniou_exn x)
+    with
+    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+        Error (where, what)
+
+Record
+------
+
+  $ test_ppx_deriving_biniou <<EOF
+  >   type t = {
+  >     foo : int;
+  >     bar : float list;
+  >   }
+  >   [@@deriving biniou]
+  > EOF
+  type t = {
+    foo: int ;
+    bar: float list }[@@deriving biniou]
+  let to_biniou =
+    (fun x ->
+       `Record
+         [|((Some "foo"), (Bi_io.hash_name "foo"),
+             (Ppx_deriving_biniou_runtime.int_to_biniou x.foo));((Some "bar"),
+                                                                  (Bi_io.hash_name
+                                                                     "bar"),
+                                                                  (Ppx_deriving_biniou_runtime.list_to_biniou
+                                                                     Ppx_deriving_biniou_runtime.float_to_biniou
+                                                                     x.bar))|] : 
+    t -> Bi_io.tree)
+  let of_biniou_exn =
+    (function
+     | `Record r ->
+         {
+           foo =
+             (Ppx_deriving_biniou_runtime.int_of_biniou_exn
+                (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                   "foo" r));
+           bar =
+             (Ppx_deriving_biniou_runtime.list_of_biniou_exn
+                Ppx_deriving_biniou_runtime.float_of_biniou_exn
+                (Ppx_deriving_biniou_runtime.record_find ~name:"of_biniou_exn"
+                   "bar" r))
+         }
+     | t -> Ppx_deriving_biniou_runtime.could_not_convert "of_biniou_exn" t : 
+    Bi_io.tree -> t)
+  let of_biniou x =
+    try Ok (of_biniou_exn x)
+    with
+    | Ppx_deriving_biniou_runtime.Could_not_convert (where, what) ->
+        Error (where, what)
