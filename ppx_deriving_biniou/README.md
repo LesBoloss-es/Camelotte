@@ -121,7 +121,7 @@ type config = {
 
 #### Variants
 
-Variants are serialised as `` `Num_variant``.
+Variants are serialised as `` `Num_variant ``.
 
 ```ocaml
 type result =
@@ -138,8 +138,8 @@ type message =
 
 #### Polymorphic variants
 
-Polymorphic variants are serialised as `` `Variant``. This makes them compatible
-with others of the same name.
+Polymorphic variants are serialised as `` `Variant ``. This makes them
+compatible with others of the same name.
 
 ```ocaml
 type status = [
@@ -161,7 +161,7 @@ let y : status = status_of_biniou_exn tree
 
 #### Tuples
 
-Tuples are serialised as `` `Tuple``.
+Tuples are serialised as `` `Tuple ``.
 
 ```ocaml
 type coordinate = float * float [@@deriving biniou]
@@ -193,18 +193,18 @@ The following built-in types have automatic support:
 
 | OCaml type  | Biniou representation |
 |-------------|-----------------------|
-| `unit`      | `` `Unit``            |
-| `bool`      | `` `Bool b``          |
-| `char`      | `` `Int8 c``          |
-| `string`    | `` `String s``        |
-| `int`       | `` `Svint x`` (signed variable-length integer) |
-| `int32`     | `` `Int32 x``         |
-| `int64`     | `` `Int64 x``         |
-| `float`     | `` `Float64 x``       |
-| `'a option` | `` `Num_variant (0, None)`` or `` `Num_variant (1, Some tree)`` |
-| `('a, 'e) result` | `` `Num_variant (0 \| 1, Some tree)`` |
-| `'a array`  | `` `Tuple [|...|]``   |
-| `'a list`   | `` `Tuple [|...|]``   |
+| `unit`      | `` `Unit ``           |
+| `bool`      | `` `Bool b ``         |
+| `char`      | `` `Int8 c ``         |
+| `string`    | `` `String s ``       |
+| `int`       | `` `Svint x `` (signed variable-length integer) |
+| `int32`     | `` `Int32 x ``        |
+| `int64`     | `` `Int64 x ``        |
+| `float`     | `` `Float64 x ``      |
+| `'a option` | `` `Num_variant (0, None) `` or `` `Num_variant (1, Some tree) `` |
+| `('a, 'e) result` | `` `Num_variant (0 \| 1, Some tree) `` |
+| `'a array`  | `` `Tuple [|...|] ``  |
+| `'a list`   | `` `Tuple [|...|] ``  |
 
 #### Recursive types
 
