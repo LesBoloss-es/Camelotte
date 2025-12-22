@@ -187,6 +187,20 @@ let int_tree_to_biniou = tree_to_biniou Ppx_deriving_biniou_runtime.int_to_binio
 let int_tree_of_biniou_exn = tree_of_biniou_exn Ppx_deriving_biniou_runtime.int_of_biniou_exn
 ```
 
+#### Recursive types
+
+```ocaml
+type expr =
+  | Int of int
+  | Add of expr * expr
+  | Mul of expr * expr
+[@@deriving biniou]
+
+let e = Add (Int 2, Mul (Int 3, Int 4))
+let tree = expr_to_biniou e
+let e' = expr_of_biniou_exn tree
+```
+
 #### Built-in types
 
 The following built-in types have automatic support:
@@ -205,20 +219,6 @@ The following built-in types have automatic support:
 | `('a, 'e) result` | `` `Num_variant (0 \| 1, Some tree) `` |
 | `'a array`  | `` `Tuple [\|...\|] ``  |
 | `'a list`   | `` `Tuple [\|...\|] ``  |
-
-#### Recursive types
-
-```ocaml
-type expr =
-  | Int of int
-  | Add of expr * expr
-  | Mul of expr * expr
-[@@deriving biniou]
-
-let e = Add (Int 2, Mul (Int 3, Int 4))
-let tree = expr_to_biniou e
-let e' = expr_of_biniou_exn tree
-```
 
 ## API reference
 
