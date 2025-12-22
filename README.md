@@ -17,6 +17,8 @@ You can also visit the [API documentation] for these packages.
 
 - [Monadise](monadise/) — Monadise direct-style functions easily
 - [Next](next/) — Niols's extended standard library
+- [ppx_deriving_biniou](ppx_deriving_biniou/) — Derive conversion functions
+  between OCaml types and Biniou trees
 - [ppx_deriving_madcast](ppx_deriving_madcast/) — Derive cast functions from
   their types
 - [ppx_monad](ppx_monad/) — Syntax extension for all monadic syntaxes
