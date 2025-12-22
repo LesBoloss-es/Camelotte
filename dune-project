@@ -37,7 +37,7 @@
 
 (package
  (name ppx_deriving_biniou)
- (synopsis "Convert types to and from Biniou")
+ (synopsis "Derive conversion functions between OCaml types and Biniou trees")
  (authors "Niols <niols@niols.fr>")
  (depends
    biniou
