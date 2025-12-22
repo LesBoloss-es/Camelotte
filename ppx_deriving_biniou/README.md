@@ -418,7 +418,7 @@ let () =
 
 [ppx_deriving]: https://ocaml.org/p/ppx_deriving/
 [Biniou]: https://ocaml.org/p/biniou/
-[Bi_io.tree]: https://ocaml.org/p/biniou/latest/doc/Bi_io/index.html#type-tree
+[`Bi_io.tree`]: https://ocaml.org/p/biniou/latest/doc/Bi_io/index.html#type-tree
 [`Ppx_deriving_biniou_runtime`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/
 [`Ppx_deriving_biniou_runtime.Could_not_convert`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/#exception-Could_not_convert
 [`Ppx_deriving_biniou_runtime.could_not_convert`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/#val-could_not_convert
