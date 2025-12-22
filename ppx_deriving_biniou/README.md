@@ -1,20 +1,21 @@
-# ppx_deriving_biniou
+# `ppx_deriving_biniou`
 
-A [ppx_deriving](https://github.com/ocaml-ppx/ppx_deriving) plugin that generates conversion functions between OCaml types and [Biniou](https://github.com/mjambon/biniou) trees.
+A [ppx_deriving] plugin that generates conversion functions between OCaml types
+and [Biniou] trees.
 
-## Overview
+`ppx_deriving_biniou` provides a simple way to serialise and deserialise OCaml
+types to and from the Biniou binary format. It works similarly to
+`ppx_deriving_yojson` but targets Biniou instead of JSON. Biniou is a binary
+data format designed for speed, safety, and ease of use. It's more compact and
+faster than JSON while maintaining many of the same benefits. For more
+information, see [Biniou]. The library converts OCaml values to and from
+[`Bi_io.tree`], Biniou's tree representation.
 
-`ppx_deriving_biniou` provides a simple way to serialise and deserialise OCaml types to and from the Biniou binary format. It works similarly to `ppx_deriving_yojson` but targets Biniou instead of JSON.
-
-**What is Biniou?** Biniou is a binary data format designed for speed, safety, and ease of use. It's more compact and faster than JSON while maintaining many of the same benefits. For more information, see the [Biniou documentation](https://github.com/mjambon/biniou).
-
-The library converts OCaml values to and from [`Bi_io.tree`][Bi_io.tree], Biniou's tree representation.
-
-**See also:** [Comparison to Atdgen](#comparison-to-atdgen) for alternatives.
+See also: [Comparison to Atdgen](#comparison-to-atdgen)
 
 ## Installation
 
-### Via Nix
+### via Nix
 
 The library is available in the Nix flake:
 
@@ -22,13 +23,17 @@ The library is available in the Nix flake:
 nix build github:lesboloss-es/camelotte#ppx_deriving_biniou
 ```
 
-### Via opam pin
+### via opam pin
 
 You can pin the library directly from the repository:
 
 ```bash
 opam pin add ppx_deriving_biniou https://github.com/lesboloss-es/camelotte.git
 ```
+
+Note: This library is not yet published to opam-repository. If you are
+interested in using it and would like to see it published on OPAM, please let us
+know by opening an issue!
 
 ### Using in your project
 
@@ -41,13 +46,12 @@ Add `ppx_deriving_biniou` to your `dune` file:
  (preprocess (pps ppx_deriving_biniou)))
 ```
 
-**Note:** This library is not yet published to opam-repository. If you're interested in using it and would like to see it published on OPAM, please let us know by opening an issue!
-
 ## Usage
 
 ### Naming convention
 
 Generated function names are based on the type name:
+
 - For `type t`, functions are named `to_biniou`, `of_biniou_exn`, `of_biniou`
 - For `type person`, functions are named `person_to_biniou`, `person_of_biniou_exn`, `person_of_biniou`
 
@@ -97,15 +101,15 @@ type output = string list [@@deriving to_biniou]
 (* Generates only: val output_to_biniou : output -> Bi_io.tree *)
 
 type input = int * float [@@deriving of_biniou]
-(* Generates: val input_of_biniou_exn : Bi_io.tree -> input
-              val input_of_biniou : Bi_io.tree -> (input, string * Bi_io.tree) result *)
+(* Generates only: val input_of_biniou_exn : Bi_io.tree -> input
+                   val input_of_biniou : Bi_io.tree -> (input, string * Bi_io.tree) result *)
 ```
 
 ### Supported types
 
 #### Records
 
-Records are serialised as [`` `Record``][Bi_io.tree].
+Records are serialised as `` `Record``.
 
 ```ocaml
 type config = {
@@ -117,7 +121,7 @@ type config = {
 
 #### Variants
 
-Variants are serialised as [`` `Num_variant``][Bi_io.tree].
+Variants are serialised as `` `Num_variant``.
 
 ```ocaml
 type result =
@@ -134,7 +138,8 @@ type message =
 
 #### Polymorphic variants
 
-Polymorphic variants are serialised as [`` `Variant``][Bi_io.tree].
+Polymorphic variants are serialised as `` `Variant``. This makes them compatible
+with others of the same name.
 
 ```ocaml
 type status = [
@@ -151,12 +156,12 @@ type status2 = [
 (* Polymorphic variants are compatible with one another: *)
 let x : status2 = `Online
 let tree = status2_to_biniou x
-let y : status = status_of_biniou_exn tree  (* Works! *)
+let y : status = status_of_biniou_exn tree
 ```
 
 #### Tuples
 
-Tuples are serialised as [`` `Tuple``][Bi_io.tree].
+Tuples are serialised as `` `Tuple``.
 
 ```ocaml
 type coordinate = float * float [@@deriving biniou]
@@ -164,8 +169,6 @@ type triple = int * string * bool [@@deriving biniou]
 ```
 
 #### Parametric types
-
-The [Biniou representation][Bi_io.tree] depends on the underlying type structure (e.g., a parametric record uses `` `Record``, a parametric variant uses `` `Num_variant``).
 
 ```ocaml
 type 'a tree =
@@ -188,24 +191,22 @@ let int_tree_of_biniou_exn = tree_of_biniou_exn Ppx_deriving_biniou_runtime.int_
 
 The following built-in types have automatic support:
 
-| OCaml Type | Biniou Representation |
-|------------|----------------------|
-| `unit` | `` `Unit`` |
-| `bool` | `` `Bool b`` |
-| `char` | `` `Int8 c`` |
-| `string` | `` `String s`` |
-| `int` | `` `Svint x`` (signed variable-length integer) |
-| `int32` | `` `Int32 x`` |
-| `int64` | `` `Int64 x`` |
-| `float` | `` `Float64 x`` |
+| OCaml type  | Biniou representation |
+|-------------|-----------------------|
+| `unit`      | `` `Unit``            |
+| `bool`      | `` `Bool b``          |
+| `char`      | `` `Int8 c``          |
+| `string`    | `` `String s``        |
+| `int`       | `` `Svint x`` (signed variable-length integer) |
+| `int32`     | `` `Int32 x``         |
+| `int64`     | `` `Int64 x``         |
+| `float`     | `` `Float64 x``       |
 | `'a option` | `` `Num_variant (0, None)`` or `` `Num_variant (1, Some tree)`` |
 | `('a, 'e) result` | `` `Num_variant (0 \| 1, Some tree)`` |
-| `'a array` | `` `Tuple [|...|]`` |
-| `'a list` | `` `Tuple [|...|]`` |
+| `'a array`  | `` `Tuple [|...|]``   |
+| `'a list`   | `` `Tuple [|...|]``   |
 
-### Recursive types
-
-The [Biniou representation][Bi_io.tree] depends on the underlying type structure (e.g., a recursive variant uses `` `Num_variant``).
+#### Recursive types
 
 ```ocaml
 type expr =
@@ -223,36 +224,63 @@ let e' = expr_of_biniou_exn tree
 
 ### Generated functions
 
-For each type `t` with `[@@deriving biniou]`, the following functions are generated:
+For each type `t` with `[@@deriving biniou]`, the following functions are
+generated:
 
 #### `to_biniou : t -> Bi_io.tree`
+
 Converts a value of type `t` to a Biniou tree.
 
-For types with other names (e.g., `person`), the function is named `person_to_biniou`.
+For types with other names (e.g., `person`), the function is named
+`person_to_biniou`.
 
 #### `of_biniou_exn : Bi_io.tree -> t`
-Converts a Biniou tree back to a value of type `t`. Raises `Ppx_deriving_biniou_runtime.Could_not_convert` if the conversion fails.
 
-For types with other names (e.g., `person`), the function is named `person_of_biniou_exn`.
+Converts a Biniou tree back to a value of type `t`. Raises
+[`Ppx_deriving_biniou_runtime.Could_not_convert`] if the conversion fails.
+
+For types with other names (e.g., `person`), the function is named
+`person_of_biniou_exn`.
 
 #### `of_biniou : Bi_io.tree -> (t, string * Bi_io.tree) result`
-Safe version that returns a `Result` instead of raising an exception. The error contains the function name where the conversion failed and the tree that couldn't be converted.
 
-For types with other names (e.g., `person`), the function is named `person_of_biniou`.
+Safe version that returns a `Result` instead of raising an exception. The error
+contains the function name where the conversion failed and the tree that
+couldn't be converted.
+
+For types with other names (e.g., `person`), the function is named
+`person_of_biniou`.
 
 ### Composition and custom converters
 
-Only `to_biniou` and `of_biniou_exn` are needed for composition. When writing custom converters by hand, the proper way to signal conversion failure is to use `Ppx_deriving_biniou_runtime.could_not_convert`:
+Only `to_biniou` and `of_biniou_exn` are needed for composition. When writing
+custom converters by hand, the proper way to signal conversion failure is to use
+[`Ppx_deriving_biniou_runtime.could_not_convert`]:
+
 
 ```ocaml
-let my_custom_of_biniou_exn : Bi_io.tree -> my_type = function
-  | `String "valid" -> MyConstructor
-  | tree -> Ppx_deriving_biniou_runtime.could_not_convert "my_custom_of_biniou_exn" tree
+let my_type_of_biniou_exn : Bi_io.tree -> my_type = function
+  | `String "valid" -> My_constructor
+  | t -> Ppx_deriving_biniou_runtime.could_not_convert "my_type_of_biniou_exn" t
+```
+
+There is a helper, [`Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn`]
+doing what its name suggests:
+
+``` ocaml
+let my_type_of_biniou_exn : Bi_io.tree -> my_type = ...
+let my_type_of_biniou : Bi_io.tree -> (my_type, (string * Bi_io.tree)) result =
+  Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn my_type_of_biniou_exn
+
+let my_other_type_of_biniou_exn : (Bi_io.tree -> 'a) -> 'a my_other_type = ...
+let my_other_type_of_biniou : (Bi_io.tree -> 'a) -> Bi_io.tree -> ('a my_other_type, (string * Bi_io.tree)) result =
+  fun a_of_biniou_exn -> Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn (my_other_type_of_biniou_exn a_of_biniou_exn)
 ```
 
 ### Parametric types
 
-For parametric types, the generated functions take serialisers/deserialisers for each type parameter:
+For parametric types, the generated functions take serialisers/deserialisers for
+each type parameter:
 
 ```ocaml
 type ('a, 'b) pair = 'a * 'b [@@deriving biniou]
@@ -264,18 +292,25 @@ type ('a, 'b) pair = 'a * 'b [@@deriving biniou]
 *)
 ```
 
-**Note:** Even though `of_biniou` returns a `Result`, it still expects the exception-raising variants (`*_of_biniou_exn`) as arguments, not the pure `Result`-returning variants. For example:
-```ocaml
-(* Correct: *)
-let safe_tree_of_biniou = tree_of_biniou Ppx_deriving_biniou_runtime.int_of_biniou_exn
+Note that, even though `of_biniou` returns a `Result`, it still expects the
+exception-raising variants (`*_of_biniou_exn`) as arguments, not the pure
+`Result`-returning variants. For example, use:
 
-(* NOT: *)
-let safe_tree_of_biniou = tree_of_biniou Ppx_deriving_biniou_runtime.int_of_biniou  (* Wrong! *)
+```ocaml
+let int_tree_of_biniou = tree_of_biniou int_of_biniou_exn
+```
+
+and not:
+
+``` ocaml
+let int_tree_of_biniou = tree_of_biniou int_of_biniou
 ```
 
 ### Runtime library
 
-The runtime library [`Ppx_deriving_biniou_runtime`](https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/index.html) provides converters for built-in types and helper functions. You typically don't need to use it directly, but it's available if you need to write custom converters.
+The runtime library [`Ppx_deriving_biniou_runtime`] provides converters for
+built-in types and helper functions. You typically don't need to use it
+directly, but it's available if you need to write custom converters.
 
 ## Options
 
@@ -290,13 +325,17 @@ type t = int * string [@@deriving biniou {alias = false}]
 
 ## Limitations
 
-Many OCaml type features are not currently supported (function types, object types, polymorphic types, first-class modules, etc.). Attempting to derive these will result in a compile-time error with a descriptive message.
+Many OCaml type features are not currently supported (function types, object
+types, first-class modules, etc.). Attempting to derive these will result in a
+compile-time error with a descriptive message.
 
-If you need support for a specific type feature, please open an issue. We're happy to add support on demand!
+If you need support for a specific type feature, please open an issue. We are
+happy to add support on demand!
 
 ## Comparison to Atdgen
 
-[Atdgen](https://atd.readthedocs.io/en/latest/) is a more comprehensive and mature solution for working with Biniou (and JSON):
+[Atdgen] is a more comprehensive and mature solution for working with Biniou
+(and JSON):
 
 ### Atdgen advantages
 
@@ -306,7 +345,7 @@ If you need support for a specific type feature, please open an issue. We're hap
 - **More efficient**: Better performance for large-scale serialisation
 - **Schema validation**: ATD provides a type definition language with validation
 
-### ppx_deriving_biniou advantages
+### `ppx_deriving_biniou` advantages
 
 - **Simplicity**: Works like other `ppx_deriving` plugins; minimal learning curve
 - **Drop-in replacement**: Can replace `ppx_deriving_yojson` with minimal changes
@@ -316,7 +355,7 @@ If you need support for a specific type feature, please open an issue. We're hap
 
 ### When to use which?
 
-- **Use ppx_deriving_biniou** when:
+- **Use `ppx_deriving_biniou`** when:
   - You want quick and easy serialisation for OCaml-only projects
   - You're already familiar with `ppx_deriving` plugins
   - You need simple serialisation without complex requirements
@@ -377,4 +416,11 @@ let () =
   assert (db = db')
 ```
 
+[ppx_deriving]: https://ocaml.org/p/ppx_deriving/
+[Biniou]: https://ocaml.org/p/biniou/
 [Bi_io.tree]: https://ocaml.org/p/biniou/latest/doc/Bi_io/index.html#type-tree
+[`Ppx_deriving_biniou_runtime`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/
+[`Ppx_deriving_biniou_runtime.Could_not_convert`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/#exception-Could_not_convert
+[`Ppx_deriving_biniou_runtime.could_not_convert`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/#val-could_not_convert
+[`Ppx_deriving_biniou_runtime.of_biniou_of_of_biniou_exn`]: https://lesboloss-es.github.io/Camelotte/ppx_deriving_biniou/Ppx_deriving_biniou_runtime/#val-of_biniou_of_of_biniou_exn
+[Atdgen]: https://atd.readthedocs.io/en/latest/
