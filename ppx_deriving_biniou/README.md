@@ -109,7 +109,7 @@ type input = int * float [@@deriving of_biniou]
 
 #### Records
 
-Records are serialised as `` `Record``.
+Records are serialised as ```Record``.
 
 ```ocaml
 type config = {
