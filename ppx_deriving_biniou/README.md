@@ -203,8 +203,8 @@ The following built-in types have automatic support:
 | `float`     | `` `Float64 x ``      |
 | `'a option` | `` `Num_variant (0, None) `` or `` `Num_variant (1, Some tree) `` |
 | `('a, 'e) result` | `` `Num_variant (0 \| 1, Some tree) `` |
-| `'a array`  | `` `Tuple [|...|] ``  |
-| `'a list`   | `` `Tuple [|...|] ``  |
+| `'a array`  | `` `Tuple [\|...\|] ``  |
+| `'a list`   | `` `Tuple [\|...\|] ``  |
 
 #### Recursive types
 
