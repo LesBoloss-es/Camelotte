@@ -1,5 +1,6 @@
 (test
  (name roundtrip_test)
+ (modes js)
  (package ppx_deriving_biniou)
  (libraries biniou ppx_deriving_biniou.runtime qcheck-alcotest)
  (preprocess
