@@ -25,17 +25,6 @@
         "aarch64-linux"
       ];
 
-      imports = [
-        ./monadise/flake-part.nix
-        ./next/flake-part.nix
-        ./ppx_deriving_biniou/flake-part.nix
-        ./ppx_deriving_madcast/flake-part.nix
-        ./ppx_monad/flake-part.nix
-        ./spacedout/flake-part.nix
-        ./testu01/flake-part.nix
-        ./valet/flake-part.nix
-      ];
-
       perSystem =
         {
           self',
@@ -47,6 +36,20 @@
         let
           opkgs = pkgs.ocamlPackages;
 
+          inherit (builtins)
+            readDir
+            ;
+          inherit (lib)
+            attrValues
+            concatMapAttrs
+            mapAttrs
+            mapAttrs'
+            filterAttrs
+            hasSuffix
+            removeSuffix
+            callPackageWith
+            ;
+
           inherit (inputs'.topiary.lib) gitHookBinFor gitHookFor;
           myTopiaryConfig = {
             includeLanguages = [
@@ -55,19 +58,51 @@
             ];
           };
 
+          ## Helper to make tighter `src` arguments to the derivations.
+          ##
+          thisSubdirAsDuneSource =
+            path:
+            with lib.fileset;
+            toSource {
+              root = ./.;
+              fileset = unions [
+                ./dune-project
+                (gitTracked path)
+              ];
+            };
+
+          ## Look for files <dir>/<name>.nix and produce an attribute set <name>
+          ## = callPackage. The callPackage is instrumented to provide regular
+          ## packages, OCaml packages, and also camelottePackages themselves.
+          ##
+          camelottePackages =
+            mapAttrs
+              (
+                _: packageFile:
+                callPackageWith (pkgs.ocamlPackages // camelottePackages) packageFile {
+                  inherit thisSubdirAsDuneSource;
+                }
+              )
+              (
+                concatMapAttrs (
+                  dir: _:
+                  mapAttrs' (packageName: _: {
+                    name = removeSuffix ".nix" packageName;
+                    value = ./. + "/${dir}/${packageName}";
+                  }) (filterAttrs (packageName: _: hasSuffix ".nix" packageName) (readDir (./. + "/${dir}")))
+                ) (filterAttrs (_: kind: kind == "directory") (readDir ./.))
+              );
+
         in
         {
+          packages = camelottePackages // {
+            ## Expose the Attic client such that the CI can grab it without having
+            ## to pull a different nixpkgs.
+            attic = pkgs.attic-client;
+          };
+
           devShells.default = pkgs.mkShell {
-            inputsFrom = with self'.packages; [
-              monadise
-              monadise-lwt
-              ppx_deriving_biniou
-              ppx_deriving_madcast
-              ppx_monad
-              spacedout
-              testu01
-              valet
-            ];
+            inputsFrom = attrValues self'.packages;
             inherit (self'.checks.git-hooks) shellHook;
             buildInputs = self'.checks.git-hooks.enabledPackages ++ [
               (gitHookBinFor myTopiaryConfig)
@@ -88,26 +123,6 @@
                 excludes = [ "valet/test/examples/.*\\.ml" ];
               };
             };
-          };
-
-          ## Expose the Attic client such that the CI can grab it without having
-          ## to pull a different nixpkgs.
-          packages.attic = pkgs.attic-client;
-
-          ## Expose a `utils` parameter to `perSystem` with a helper to make
-          ## tighter `src` arguments to the derivations.
-          ##
-          _module.args.utils = {
-            thisSubdirAsDuneSource =
-              path:
-              with lib.fileset;
-              toSource {
-                root = ./.;
-                fileset = unions [
-                  ./dune-project
-                  (gitTracked path)
-                ];
-              };
           };
         };
 
