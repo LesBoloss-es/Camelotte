@@ -50,7 +50,7 @@ jobs:
       - name: Install Attic
         run: nix profile add .#attic
       - name: Set up Attic cache
-        uses: ryanccn/attic-action@v0.4
+        uses: ryanccn/attic-action@v0.5
         with:
           endpoint: https://nix-cache.niols.fr/
           cache: camelotte
@@ -118,7 +118,7 @@ jobs:
         run: opam exec -- dune build @doc
       - name: Upload documentation artifact
         if: matrix.system == 'ubuntu-latest'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _build/default/_doc/_html
 
@@ -139,7 +139,7 @@ jobs:
       - name: Install Attic
         run: nix profile add .#attic
       - name: Set up Attic cache
-        uses: ryanccn/attic-action@v0.4
+        uses: ryanccn/attic-action@v0.5
         with:
           endpoint: https://nix-cache.niols.fr/
           cache: camelotte
@@ -158,7 +158,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   summarise:
     name: Summarise
