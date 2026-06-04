@@ -26,6 +26,18 @@ monadise_2_1 List.sort (fun x y -> Lwt.return (Int.compare x y)) [3; 1; 2]
 (* => a fulfilled promise holding [1; 2; 3] *)
 ```
 
+### Two-function variant
+
+Alternatively, Monadise provides two functions, `run` and `yield`, which de-couple setting the handler and using it. This is in particular useful for nested iterators. For instance:
+
+``` ocaml
+include Monadise.Make(Option)
+run @@ fun () ->
+  Array.map (List.map (Array.map (fun x -> yield (Some (x + 1))))) xss
+```
+
+will take a `xss : int array list array` and return an `int array list array option`, having mapped a function `int -> int option` on the inside. Try writing it with Monadise and you will see!
+
 ### How to choose `monadise_<n>_<m>`
 
 The result of `Make` is a module containing:
@@ -60,7 +72,7 @@ val Array.fold_lefti : ('acc -> int -> 'a -> 'acc) -> 'acc -> 'a Array.t -> 'acc
 
 ### Breaking the abstraction
 
-Monadise relies on effects, so types won't have your back to ensure that the effect is handled properly. It is therefore important to understand the limitations. Failing to do so will result in an unhandled `Monadise_yield` effect.
+Monadise relies on effects, so types won't have your back to ensure that the effect is handled properly. It is therefore important to understand the limitations. Failing to do so will result in an unhandled `Yield` effect.
 
 There is just one rule: all the calls to the monadic action must take place in the context of the call to `monadise_<n>_<m>`. One example where this rule is easily broken is in `Seq`, for instance, in any function that returns a sequence:
 
@@ -71,7 +83,7 @@ let s = monadise_1_1 Seq.map (fun x -> Some (x + 1)) (List.to_seq [1; 2; 3])
 let s = Option.get s
 (* s is an int Seq.t, but evaluating it runs the action above, and so: *)
 let () = Seq.iter (Format.printf " %d") s
-(* => Exception: Stdlib.Effect.Unhandled(Monadise_yield(1)) *)
+(* => Exception: Stdlib.Effect.Unhandled(Yield(1)) *)
 ```
 
 In general, Monadise should not be used on any function that stores its action for later use. Not all functions from `Seq` are unsafe, and Monadise will work fine if called directly on `Seq.iter`, for instance, so it would be possible to do:
@@ -94,8 +106,8 @@ val monadise : (('a -> 'b) -> 'c) -> (('a -> 'b m) -> 'c m)
 
 It does three things:
 
-- It consumes a function, say `f : ('a -> 'b) -> 'c`, and a monadic `action : 'a -> 'b m` and will introduce an effect `Monadise_yield` consuming an `'a`.
+- It consumes a function, say `f : ('a -> 'b) -> 'c`, and a monadic `action : 'a -> 'b m` and will introduce an effect `Yield` consuming an `'a`.
 
-- It calls `f` on a function that performs the `Monadise_yield` effect. If `f = List.map`, for instance, this means that, every time `List.map` encounters a value, it performs `Monadise_yield` on it.
+- It calls `f` on a function that performs the `Yield` effect. If `f = List.map`, for instance, this means that, every time `List.map` encounters a value, it performs `Yield` on it.
 
-- It introduces an effect handler for `Monadise_yield` that calls `action` on the `'a`, then `bind'` on the result, with a function that consumes the `'b` and resumes the computation. At the end of the computation, we call `return`.
+- It introduces an effect handler for `Yield` that calls `action` on the `'a`, then `bind'` on the result, with a function that consumes the `'b` and resumes the computation. At the end of the computation, we call `return`.

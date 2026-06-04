@@ -4,14 +4,14 @@
 
 module type Monad = sig
   type 'a t
-
   val return : 'a -> 'a t
-
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 end
 
 module type S = sig
   type 'a m
+
+  (** {2 One-function variant} *)
 
   val monadise :
     (('a -> 'b) -> 'c) ->
@@ -20,7 +20,41 @@ module type S = sig
       a direct-style action, and makes it into a function consuming a monadic
       action for the given monad. *)
 
-  (** {2 Variations}
+  (** {2 Two-functions variant}
+
+      Say you want to map a function [f] of type ['a -> 'b m] on an
+      ['a list array]. With {!monadise}, you would need to do
+      {[
+        monadise_1_1 Array.map (fun xs -> monadise_1_1 List.map (fun x -> f x)) xss
+      ]}
+      or the shorter
+      {[
+        monadise_1_1 Array.map monadise_1_1 List.map f
+      ]}
+      which, either way, means calling {!monadise} twice.
+
+      With the two-functions variant, one only needs to install the
+      handler once with {!run}, and then one can {!yield} anywhere in
+      the context. For instance, the above code becomes:
+      {[
+        run @@ fun () ->
+        Array.map
+          (fun xs ->
+            List.map (fun x -> yield (f x)))
+          xss
+      ]}
+      This also avoids having to think of the number of arguments. *)
+
+  val run : (unit -> 'a) -> 'a m
+  (** Set up the context in which to call {!yield}. It is safe,
+      although useless, to nest this function. *)
+
+  val yield : 'a m -> 'a
+  (** Transforms a monadic value into a direct value. This only works
+      in the context of {!run}, without which you will get a runtime
+      exception [Stdlib.Effect.Unhandled(Yield(_))] *)
+
+  (** {2 Variations over [monadise]}
 
       Everything can be derived from {!monadise}. However, to save the user some
       gymnasics, we provide a bunch of helpers for functions with different
@@ -160,23 +194,18 @@ end
 module Make (M : Monad) : S with type 'a m = 'a M.t = struct
   type 'a m = 'a M.t
 
-  let monadise (type a b c)
-      (f : (a -> b) -> c)
-      : (a -> b m) -> c m
-    =
-    let open Effect in
-    let open Effect.Deep in
-    let module E = struct
-      type _ Effect.t += Monadise_yield : a -> b Effect.t
-      let monadise_yield x = perform (Monadise_yield x)
-    end in
-    fun action ->
-      match f E.monadise_yield with
-      | v -> M.return v
-      | effect (E.Monadise_yield x), k ->
-        M.bind
-          (action x)
-          (fun y -> continue k y)
+  type _ Effect.t += Yield : 'a m -> 'a Effect.t
+
+  let run (f : unit -> 'a) : 'a m =
+    match f () with
+    | v -> M.return v
+    | effect (Yield x), k -> M.bind x (Effect.Deep.continue k)
+
+  let yield (x : 'a m) : 'a =
+    Effect.perform (Yield x)
+
+  let monadise f = fun a ->
+    run (fun () -> f (fun x -> yield (a x)))
 
   let monadise_2 f = fun a -> monadise (fun a -> f (fun x y -> a (x, y))) (fun (x, y) -> a x y)
   let monadise_3 f = fun a -> monadise (fun a -> f (fun x y z -> a (x, y, z))) (fun (x, y, z) -> a x y z)
