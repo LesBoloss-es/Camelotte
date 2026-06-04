@@ -7,13 +7,7 @@ module type Monad = sig
 
   val return : 'a -> 'a t
 
-  (** Monadic bind, with an extra [~on_error] argument, which runs in the error
-      case. This is necessary to garbage collect continuations. *)
-  val bind' :
-    on_error: (unit -> unit) ->
-    'a t ->
-    ('a -> 'b t) ->
-    'b t
+  val bind : 'a t -> ('a -> 'b t) -> 'b t
 end
 
 module type S = sig
@@ -171,40 +165,18 @@ module Make (M : Monad) : S with type 'a m = 'a M.t = struct
       : (a -> b m) -> c m
     =
     let open Effect in
-    let open Effect.Shallow in
+    let open Effect.Deep in
     let module E = struct
       type _ Effect.t += Monadise_yield : a -> b Effect.t
       let monadise_yield x = perform (Monadise_yield x)
-      exception Done
     end in
     fun action ->
-      (* little trick to avoid allocating over and over again *)
-      let handler = ref (Obj.magic 0) in
-      handler :=
-        {
-          retc = M.return;
-          exnc = raise;
-          effc = (fun (type b') (e : b' Effect.t) ->
-            match e with
-            | E.Monadise_yield x ->
-              (* type b' = b at this point *)
-              Some (fun (k : (b', c) continuation) ->
-                M.bind'
-                  (action x)
-                  (fun y -> continue_with k y !handler)
-                  ~on_error: (fun () ->
-                    (* clean up the stack *)
-                    discontinue_with k E.Done {
-                      retc = (fun _ -> assert false);
-                      effc = (fun _ -> assert false);
-                      exnc = (function E.Done -> () | exn -> raise exn)
-                    }
-                  )
-              )
-            | _ -> None
-          );
-        };
-      continue_with (fiber @@ fun () -> f E.monadise_yield) () !handler
+      match f E.monadise_yield with
+      | v -> M.return v
+      | effect (E.Monadise_yield x), k ->
+        M.bind
+          (action x)
+          (fun y -> continue k y)
 
   let monadise_2 f = fun a -> monadise (fun a -> f (fun x y -> a (x, y))) (fun (x, y) -> a x y)
   let monadise_3 f = fun a -> monadise (fun a -> f (fun x y z -> a (x, y, z))) (fun (x, y, z) -> a x y z)
@@ -246,9 +218,6 @@ end
 
 module Option = Make(struct
   type 'a t = 'a option
-  let return x = Some x
-  let bind' ~on_error x f =
-    match x with
-    | None -> on_error (); None
-    | Some x -> f x
+  let return = Option.some
+  let bind = Option.bind
 end)

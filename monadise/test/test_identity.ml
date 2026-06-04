@@ -1,7 +1,7 @@
 include Monadise.Make(struct
   type 'a t = 'a
   let return x = x
-  let bind' ~on_error: _ x f = f x
+  let bind x f = f x
 end)
 
 open Alcotest

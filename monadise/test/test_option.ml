@@ -1,10 +1,7 @@
 include Monadise.Make(struct
   type 'a t = 'a option
   let return x = Some x
-  let bind' ~on_error x f =
-    match x with
-    | None -> on_error (); None
-    | Some x -> f x
+  let bind = Option.bind
 end)
 
 open Alcotest

@@ -26,18 +26,6 @@ monadise_2_1 List.sort (fun x y -> Lwt.return (Int.compare x y)) [3; 1; 2]
 (* => a fulfilled promise holding [1; 2; 3] *)
 ```
 
-### Note on `bind'`
-
-There is however a caveat: the `Option`, `Result` and `Lwt` modules above must have the following signature:
-
-``` ocaml
-type 'a t
-val return : 'a -> 'a t
-val bind' : on_error: (unit -> unit) -> 'a t -> ('a -> 'b t) -> 'b t
-```
-
-Note in particular the extra [~on_error] argument to [bind']. This is necessary for garbage collection of continuations. If anyone effect-savvy had an idea of how to get rid of this, I'm all ears.
-
 ### How to choose `monadise_<n>_<m>`
 
 The result of `Make` is a module containing:
