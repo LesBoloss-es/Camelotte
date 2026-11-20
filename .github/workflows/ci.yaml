@@ -42,7 +42,7 @@ jobs:
         with:
           submodules: true
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             accept-flake-config = true
@@ -131,7 +131,7 @@ jobs:
         with:
           submodules: true
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             accept-flake-config = true
